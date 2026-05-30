@@ -102,20 +102,30 @@ function sortNodes(nodes: ResourceNode[]) {
   });
 }
 
+type RelationZone = "focus" | "traffic" | "controllers" | "dependents" | "config" | "secondary";
+
+function zoneForRelation(edgeType: string, direction: "incoming" | "outgoing"): RelationZone {
+  if (edgeType === "exposes" || edgeType === "ingress-routes-to") {
+    return "traffic";
+  }
+  if (edgeType === "references") {
+    return direction === "outgoing" ? "config" : "dependents";
+  }
+  if (edgeType === "owns" || edgeType === "selects") {
+    return direction === "incoming" ? "controllers" : "dependents";
+  }
+  if (edgeType === "scales") {
+    return "secondary";
+  }
+  return "secondary";
+}
+
 function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], selectedId: string | null) {
-  const kindOrder = [
-    "Namespace",
-    "Ingress",
-    "Service",
-    "Deployment",
-    "HorizontalPodAutoscaler",
-    "ReplicaSet",
-    "Pod",
-    "ConfigMap",
-    "Secret"
-  ];
+  const kindOrder = ["Namespace", "Ingress", "Service", "Deployment", "HorizontalPodAutoscaler", "ReplicaSet", "Pod", "ConfigMap", "Secret"];
 
   const adjacency = new Map<string, Set<string>>();
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const edgeByPair = new Map<string, GraphResponse["edges"][number]>();
   for (const edge of edges) {
     if (!adjacency.has(edge.source)) {
       adjacency.set(edge.source, new Set());
@@ -125,6 +135,8 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
     }
     adjacency.get(edge.source)!.add(edge.target);
     adjacency.get(edge.target)!.add(edge.source);
+    edgeByPair.set(`${edge.source}=>${edge.target}`, edge);
+    edgeByPair.set(`${edge.target}<=${edge.source}`, edge);
   }
 
   const distanceById = new Map<string, number>();
@@ -144,35 +156,108 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
     }
   }
 
-  const columns = new Map<number, ResourceNode[]>();
-  for (const node of nodes) {
-    const distance = distanceById.get(node.id) ?? (selectedId ? 99 : kindOrder.indexOf(node.kind));
-    if (!columns.has(distance)) {
-      columns.set(distance, []);
-    }
-    columns.get(distance)!.push(node);
-  }
-
-  const orderedColumns = [...columns.entries()].sort(([left], [right]) => left - right);
   const flowNodes: Node[] = [];
+  const buckets = new Map<string, ResourceNode[]>();
 
-  orderedColumns.forEach(([distance, items], columnIndex) => {
-    const sortedItems = [...items].sort((left, right) => {
-      const kindDelta = kindOrder.indexOf(left.kind) - kindOrder.indexOf(right.kind);
-      if (kindDelta !== 0) {
-        return kindDelta;
+  if (selectedId && nodeById.has(selectedId)) {
+    for (const node of nodes) {
+      if (node.id === selectedId) {
+        buckets.set("focus:0", [node]);
+        continue;
       }
-      const relationDelta = right.relations.length - left.relations.length;
-      if (relationDelta !== 0) {
-        return relationDelta;
-      }
-      return left.name.localeCompare(right.name);
-    });
+      const distance = distanceById.get(node.id) ?? 2;
+      let zone: RelationZone = "secondary";
 
-    const totalHeight = Math.max((sortedItems.length - 1) * 150, 0);
-    sortedItems.forEach((item, itemIndex) => {
+      const directForward = edgeByPair.get(`${selectedId}=>${node.id}`);
+      const directBackward = edgeByPair.get(`${node.id}=>${selectedId}`);
+      if (directForward) {
+        zone = zoneForRelation(directForward.type, "outgoing");
+      } else if (directBackward) {
+        zone = zoneForRelation(directBackward.type, "incoming");
+      } else {
+        const linkedNeighborId = [...(adjacency.get(node.id) ?? [])].find((neighborId) => (distanceById.get(neighborId) ?? 99) === 1);
+        if (linkedNeighborId) {
+          const viaForward = edgeByPair.get(`${linkedNeighborId}=>${node.id}`);
+          const viaBackward = edgeByPair.get(`${node.id}=>${linkedNeighborId}`);
+          if (viaForward) {
+            zone = zoneForRelation(viaForward.type, "outgoing");
+          } else if (viaBackward) {
+            zone = zoneForRelation(viaBackward.type, "incoming");
+          }
+        }
+      }
+
+      const bucketKey = `${zone}:${Math.min(distance, 2)}`;
+      if (!buckets.has(bucketKey)) {
+        buckets.set(bucketKey, []);
+      }
+      buckets.get(bucketKey)!.push(node);
+    }
+
+    const bucketPlacements: Record<string, { x: number; y: number; vertical?: boolean }> = {
+      "focus:0": { x: 0, y: 0 },
+      "traffic:1": { x: 120, y: -220, vertical: false },
+      "traffic:2": { x: 360, y: -260, vertical: false },
+      "controllers:1": { x: -260, y: -30, vertical: true },
+      "controllers:2": { x: -520, y: -30, vertical: true },
+      "dependents:1": { x: 280, y: 40, vertical: true },
+      "dependents:2": { x: 540, y: 40, vertical: true },
+      "config:1": { x: 150, y: 220, vertical: false },
+      "config:2": { x: 400, y: 250, vertical: false },
+      "secondary:1": { x: -40, y: 220, vertical: false },
+      "secondary:2": { x: -300, y: 250, vertical: false }
+    };
+
+    for (const [bucketKey, items] of buckets) {
+      const placement = bucketPlacements[bucketKey] ?? { x: 0, y: 0, vertical: true };
+      const sortedItems = [...items].sort((left, right) => {
+        const kindDelta = kindOrder.indexOf(left.kind) - kindOrder.indexOf(right.kind);
+        if (kindDelta !== 0) {
+          return kindDelta;
+        }
+        return left.name.localeCompare(right.name);
+      });
+      const totalSpan = Math.max((sortedItems.length - 1) * 120, 0);
+
+      sortedItems.forEach((item, index) => {
+        const offset = index * 120 - totalSpan / 2;
+        const meta = kindMeta[item.kind] ?? kindMeta.Namespace;
+        const isSelected = item.id === selectedId;
+        const distance = distanceById.get(item.id) ?? 0;
+        flowNodes.push({
+          id: item.id,
+          data: {
+            name: item.name,
+            kind: item.kind,
+            namespace: item.namespace ?? "cluster",
+            accent: meta.accent,
+            tint: meta.tint,
+            icon: meta.icon,
+            issues: countIssues(item),
+            depth: distance === 0 ? "focus" : `hop ${distance}`
+          },
+          position: {
+            x: placement.vertical ? placement.x : placement.x + offset,
+            y: placement.vertical ? placement.y + offset : placement.y
+          },
+          style: {
+            width: 220,
+            borderRadius: 18,
+            border: `1px solid ${isSelected ? meta.accent : "rgba(148, 163, 184, 0.18)"}`,
+            background: `linear-gradient(180deg, ${meta.tint}, rgba(9, 14, 24, 0.96))`,
+            color: "#eff6ff",
+            boxShadow: isSelected
+              ? `0 0 0 1px ${meta.accent} inset, 0 18px 40px rgba(2, 6, 23, 0.45)`
+              : "0 18px 40px rgba(2, 6, 23, 0.35)",
+            padding: 0
+          }
+        });
+      });
+    }
+  } else {
+    const sorted = sortNodes(nodes);
+    sorted.forEach((item, index) => {
       const meta = kindMeta[item.kind] ?? kindMeta.Namespace;
-      const isSelected = item.id === selectedId;
       flowNodes.push({
         id: item.id,
         data: {
@@ -183,26 +268,21 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
           tint: meta.tint,
           icon: meta.icon,
           issues: countIssues(item),
-          depth: distance === 99 ? "related" : distance === 0 ? "focus" : `hop ${distance}`
+          depth: item.kind
         },
-        position: {
-          x: columnIndex * 270,
-          y: itemIndex * 150 - totalHeight / 2
-        },
+        position: { x: Math.floor(index / 6) * 260, y: (index % 6) * 120 },
         style: {
-          width: 210,
+          width: 220,
           borderRadius: 18,
-          border: `1px solid ${isSelected ? meta.accent : "rgba(148, 163, 184, 0.18)"}`,
+          border: "1px solid rgba(148, 163, 184, 0.18)",
           background: `linear-gradient(180deg, ${meta.tint}, rgba(9, 14, 24, 0.96))`,
           color: "#eff6ff",
-          boxShadow: isSelected
-            ? `0 0 0 1px ${meta.accent} inset, 0 18px 40px rgba(2, 6, 23, 0.45)`
-            : "0 18px 40px rgba(2, 6, 23, 0.35)",
+          boxShadow: "0 18px 40px rgba(2, 6, 23, 0.35)",
           padding: 0
         }
       });
     });
-  });
+  }
 
   const visibleIds = new Set(nodes.map((node) => node.id));
   const flowEdges: Edge[] = edges
@@ -211,21 +291,18 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
       id: edge.id,
       source: edge.source,
       target: edge.target,
-      label: edgeMeta[edge.type]?.label.toLowerCase() ?? edge.type,
+      label: "",
       type: "smoothstep",
-      animated: edge.type === "scales" || edge.type === "ingress-routes-to",
+      animated: false,
       markerEnd: {
         type: MarkerType.ArrowClosed,
         color: edgeMeta[edge.type]?.color ?? "#94a3b8"
       },
       style: {
         stroke: edgeMeta[edge.type]?.color ?? "#94a3b8",
-        strokeWidth: edge.type === "owns" ? 3.5 : 2.6
-      },
-      labelStyle: {
-        fill: edgeMeta[edge.type]?.color ?? "#cbd5e1",
-        fontSize: 11,
-        fontWeight: 700
+        strokeWidth: edge.type === "owns" ? 3.6 : 2.4,
+        strokeDasharray: edge.type === "references" ? "6 6" : undefined,
+        opacity: 0.92
       }
     }));
 
@@ -460,7 +537,7 @@ export function App() {
         .map((node) => ({
           id: node.id,
           title: `${node.kind} ${node.name}`,
-          detail: node.insights[0],
+          detail: node.insights[0].replace(/^([A-Z][^.]+)\.?$/, "$1"),
           severity: countIssues(node) >= 2 ? "high" : "medium"
         })),
     [namespaceScopedNodes]
@@ -627,6 +704,9 @@ export function App() {
                     </div>
                   ))}
                 </div>
+                <p className="graph-hint">
+                  Fokus in der Mitte. Traffic oben, Controller links, abhängige Ressourcen rechts, Konfiguration unten.
+                </p>
               </div>
 
               {visibleNodes.length === 0 ? (
