@@ -370,3 +370,80 @@ export function buildGraph(input: BuildInput): GraphResponse {
     warnings
   };
 }
+
+function nodePriority(node: ResourceNode, edgesByNode: Map<string, number>) {
+  return node.insights.length * 10 + (edgesByNode.get(node.id) ?? 0);
+}
+
+export function focusGraph(graph: GraphResponse, focusId?: string, depth = 1, limit = 80): GraphResponse {
+  if (graph.nodes.length <= limit && !focusId) {
+    return graph;
+  }
+
+  const nodeMap = new Map(graph.nodes.map((node) => [node.id, node]));
+  const adjacency = new Map<string, Set<string>>();
+  const edgesByNode = new Map<string, number>();
+
+  for (const edge of graph.edges) {
+    if (!adjacency.has(edge.source)) {
+      adjacency.set(edge.source, new Set());
+    }
+    if (!adjacency.has(edge.target)) {
+      adjacency.set(edge.target, new Set());
+    }
+    adjacency.get(edge.source)!.add(edge.target);
+    adjacency.get(edge.target)!.add(edge.source);
+    edgesByNode.set(edge.source, (edgesByNode.get(edge.source) ?? 0) + 1);
+    edgesByNode.set(edge.target, (edgesByNode.get(edge.target) ?? 0) + 1);
+  }
+
+  const selectedIds = new Set<string>();
+
+  if (focusId && nodeMap.has(focusId)) {
+    const queue: Array<{ id: string; level: number }> = [{ id: focusId, level: 0 }];
+    selectedIds.add(focusId);
+
+    while (queue.length > 0 && selectedIds.size < limit) {
+      const current = queue.shift()!;
+      if (current.level >= depth) {
+        continue;
+      }
+
+      const neighbors = [...(adjacency.get(current.id) ?? [])].sort((left, right) => {
+        const leftNode = nodeMap.get(left);
+        const rightNode = nodeMap.get(right);
+        return (rightNode ? nodePriority(rightNode, edgesByNode) : 0) - (leftNode ? nodePriority(leftNode, edgesByNode) : 0);
+      });
+
+      for (const neighborId of neighbors) {
+        if (selectedIds.size >= limit) {
+          break;
+        }
+        if (selectedIds.has(neighborId)) {
+          continue;
+        }
+        selectedIds.add(neighborId);
+        queue.push({ id: neighborId, level: current.level + 1 });
+      }
+    }
+  }
+
+  if (selectedIds.size === 0) {
+    for (const node of [...graph.nodes].sort((left, right) => nodePriority(right, edgesByNode) - nodePriority(left, edgesByNode))) {
+      selectedIds.add(node.id);
+      if (selectedIds.size >= limit) {
+        break;
+      }
+    }
+  }
+
+  const nodes = graph.nodes.filter((node) => selectedIds.has(node.id));
+  const edges = graph.edges.filter((edge) => selectedIds.has(edge.source) && selectedIds.has(edge.target));
+
+  return {
+    ...graph,
+    nodes,
+    edges,
+    truncated: nodes.length < graph.nodes.length
+  };
+}

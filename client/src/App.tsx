@@ -9,11 +9,12 @@ import {
   type NodeMouseHandler
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { GraphResponse, ResourceNode } from "./types";
+import type { GraphResponse, ResourceNode, ResourcesResponse } from "./types";
 
 type HighlightMode = "all" | "issues" | "managers" | "references";
 type CenterViewMode = "graph" | "list";
 type InspectorTab = "overview" | "yaml" | "events";
+type GraphDepth = "1" | "2";
 
 const edgeMeta: Record<string, { color: string; label: string }> = {
   owns: { color: "#3b82f6", label: "Owns" },
@@ -233,64 +234,126 @@ const nodeTypes = {
 };
 
 export function App() {
+  const [resourcesPayload, setResourcesPayload] = useState<ResourcesResponse | null>(null);
   const [graph, setGraph] = useState<GraphResponse | null>(null);
+  const [knownNamespaces, setKnownNamespaces] = useState<string[]>(["all"]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadingResources, setLoadingResources] = useState(true);
+  const [loadingGraph, setLoadingGraph] = useState(false);
   const [search, setSearch] = useState("");
   const [namespaceFilter, setNamespaceFilter] = useState("all");
   const [highlightMode, setHighlightMode] = useState<HighlightMode>("issues");
   const [centerViewMode, setCenterViewMode] = useState<CenterViewMode>("graph");
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("overview");
+  const [graphDepth, setGraphDepth] = useState<GraphDepth>("1");
 
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
     async function load() {
-      setLoading(true);
+      setLoadingResources(true);
       setError(null);
+      setGraph(null);
       try {
-        const response = await fetch("/api/graph");
+        const params = new URLSearchParams();
+        if (namespaceFilter !== "all") {
+          params.set("namespace", namespaceFilter);
+        }
+        const response = await fetch(`/api/resources?${params.toString()}`, { signal: controller.signal });
         const payload = await response.json();
         if (!response.ok) {
-          throw new Error(payload.error ?? "Failed to load graph");
+          throw new Error(payload.error ?? "Failed to load resources");
         }
-        if (active) {
-          setGraph(payload);
-          setSelectedId(payload.nodes[0]?.id ?? null);
-        }
+        setResourcesPayload(payload);
+        setKnownNamespaces((current) => {
+          const values = new Set(current);
+          values.add("all");
+          payload.resources.forEach((node: ResourceNode) => values.add(node.namespace ?? "cluster-wide"));
+          return Array.from(values).sort((left, right) => {
+            if (left === "all") {
+              return -1;
+            }
+            if (right === "all") {
+              return 1;
+            }
+            return left.localeCompare(right);
+          });
+        });
+        setSelectedId((currentSelectedId) => {
+          if (currentSelectedId && payload.resources.some((node: ResourceNode) => node.id === currentSelectedId)) {
+            return currentSelectedId;
+          }
+          return payload.resources[0]?.id ?? null;
+        });
       } catch (fetchError) {
-        if (active) {
-          setError(fetchError instanceof Error ? fetchError.message : "Unknown error");
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          return;
         }
+        setError(fetchError instanceof Error ? fetchError.message : "Unknown error");
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        setLoadingResources(false);
       }
     }
     load();
     return () => {
-      active = false;
+      controller.abort();
     };
-  }, []);
+  }, [namespaceFilter]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    async function loadGraph() {
+      if (!resourcesPayload) {
+        return;
+      }
+      setLoadingGraph(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        if (namespaceFilter !== "all") {
+          params.set("namespace", namespaceFilter);
+        }
+        if (selectedId) {
+          params.set("focusId", selectedId);
+        }
+        params.set("depth", graphDepth);
+        params.set("limit", graphDepth === "1" ? "60" : "120");
+        const response = await fetch(`/api/graph?${params.toString()}`, { signal: controller.signal });
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Failed to load graph");
+        }
+        setGraph(payload);
+      } catch (fetchError) {
+        if (fetchError instanceof Error && fetchError.name === "AbortError") {
+          return;
+        }
+        setError(fetchError instanceof Error ? fetchError.message : "Unknown error");
+      } finally {
+        setLoadingGraph(false);
+      }
+    }
+    loadGraph();
+    return () => {
+      controller.abort();
+    };
+  }, [graphDepth, namespaceFilter, resourcesPayload, selectedId]);
 
   const namespaces = useMemo(() => {
-    const values = new Set<string>();
-    graph?.nodes.forEach((node) => values.add(node.namespace ?? "cluster-wide"));
-    return ["all", ...Array.from(values).sort((left, right) => left.localeCompare(right))];
-  }, [graph]);
+    return knownNamespaces;
+  }, [knownNamespaces]);
 
   const namespaceScopedNodes = useMemo(() => {
-    if (!graph) {
+    if (!resourcesPayload) {
       return [];
     }
-    return graph.nodes.filter((node) => {
+    return resourcesPayload.resources.filter((node) => {
       if (namespaceFilter === "all") {
         return true;
       }
       return (node.namespace ?? "cluster-wide") === namespaceFilter;
     });
-  }, [graph, namespaceFilter]);
+  }, [namespaceFilter, resourcesPayload]);
 
   const visibleNodes = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
@@ -316,17 +379,18 @@ export function App() {
     }
   }, [selectedId, visibleNodes]);
 
-  const selected = graph?.nodes.find((node) => node.id === selectedId) ?? null;
+  const selected = resourcesPayload?.resources.find((node) => node.id === selectedId) ?? null;
+
+  const graphNodes = graph?.nodes ?? [];
 
   const filteredEdges = useMemo(() => {
     if (!graph) {
       return [];
     }
-    const visibleIds = new Set(visibleNodes.map((node) => node.id));
+    const visibleIds = new Set(graphNodes.map((node) => node.id));
     return graph.edges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target));
-  }, [graph, visibleNodes]);
-
-  const flow = useMemo(() => buildFlowLayout(visibleNodes, filteredEdges, selectedId), [filteredEdges, selectedId, visibleNodes]);
+  }, [graph, graphNodes]);
+  const flow = useMemo(() => buildFlowLayout(graphNodes, filteredEdges, selectedId), [filteredEdges, graphNodes, selectedId]);
 
   const metrics = useMemo(() => {
     const managerNames = new Set<string>();
@@ -389,7 +453,7 @@ export function App() {
           <p>{error}</p>
           <p>Check ServiceAccount, RBAC, and Kubernetes API reachability.</p>
         </main>
-      ) : graph ? (
+      ) : resourcesPayload ? (
         <>
           <section className="metric-row">
             <label className="metric-card metric-card--select">
@@ -425,7 +489,7 @@ export function App() {
             </div>
             <div className="metric-card">
               <span>Last sync</span>
-              <strong>{formatRelativeTime(graph.generatedAt)}</strong>
+              <strong>{formatRelativeTime((graph ?? resourcesPayload).generatedAt)}</strong>
             </div>
           </section>
 
@@ -470,21 +534,30 @@ export function App() {
 
             <section className="panel graph-panel">
               <div className="graph-toolbar">
-                <div className="view-switch">
-                  <button
-                    type="button"
-                    className={centerViewMode === "graph" ? "active" : ""}
-                    onClick={() => setCenterViewMode("graph")}
-                  >
-                    Graph view
-                  </button>
-                  <button
-                    type="button"
-                    className={centerViewMode === "list" ? "active" : ""}
-                    onClick={() => setCenterViewMode("list")}
-                  >
-                    List view
-                  </button>
+                <div className="graph-toolbar__top">
+                  <div className="view-switch">
+                    <button
+                      type="button"
+                      className={centerViewMode === "graph" ? "active" : ""}
+                      onClick={() => setCenterViewMode("graph")}
+                    >
+                      Graph view
+                    </button>
+                    <button
+                      type="button"
+                      className={centerViewMode === "list" ? "active" : ""}
+                      onClick={() => setCenterViewMode("list")}
+                    >
+                      List view
+                    </button>
+                  </div>
+                  <label className="graph-scope-select">
+                    <span>Scope</span>
+                    <select value={graphDepth} onChange={(event) => setGraphDepth(event.target.value as GraphDepth)}>
+                      <option value="1">Direct relations</option>
+                      <option value="2">Two hops</option>
+                    </select>
+                  </label>
                 </div>
                 <div className="edge-legend">
                   {Object.entries(edgeMeta).map(([key, value]) => (
@@ -501,8 +574,17 @@ export function App() {
                   <h3>No resources match this filter</h3>
                   <p>Try a different namespace, highlight mode, or search term.</p>
                 </div>
+              ) : loadingGraph && !graph ? (
+                <div className="empty-shell empty-shell--center">
+                  <h3>Loading focused graph</h3>
+                </div>
               ) : centerViewMode === "graph" ? (
                 <div className="graph-stage">
+                  {graph?.truncated ? (
+                    <div className="graph-notice">
+                      Focused subgraph shown for performance. Increase scope only when needed.
+                    </div>
+                  ) : null}
                   <ReactFlow
                     nodes={flow.nodes.map((node) => ({ ...node, type: "resource" }))}
                     edges={flow.edges}
@@ -519,7 +601,7 @@ export function App() {
                 </div>
               ) : (
                 <div className="relation-list">
-                  {visibleNodes.map((node) => (
+                  {graphNodes.map((node) => (
                     <article key={node.id} className="relation-card">
                       <div className="relation-card__top">
                         <div>
@@ -743,7 +825,7 @@ export function App() {
         </>
       ) : (
         <main className="empty-shell">
-          <h2>Waiting for cluster data</h2>
+          <h2>{loadingResources ? "Loading cluster data" : "Waiting for cluster data"}</h2>
         </main>
       )}
     </div>

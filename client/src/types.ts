@@ -44,4 +44,11 @@ export interface GraphResponse {
   edges: GraphEdge[];
   generatedAt: string;
   warnings: string[];
+  truncated?: boolean;
+}
+
+export interface ResourcesResponse {
+  resources: ResourceNode[];
+  generatedAt: string;
+  warnings: string[];
 }

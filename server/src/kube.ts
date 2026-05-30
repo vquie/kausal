@@ -13,6 +13,8 @@ export interface SecretMetadataItem {
   metadata: {
     name?: string;
     namespace?: string;
+    uid?: string;
+    creationTimestamp?: string;
     labels?: Record<string, string>;
     annotations?: Record<string, string>;
     ownerReferences?: Array<{
@@ -125,8 +127,9 @@ function httpsGetJson<T>(options: ReturnType<typeof buildRequestOptions>): Promi
   });
 }
 
-export async function listSecretMetadata(kc: k8s.KubeConfig): Promise<SecretMetadataItem[]> {
-  const options = buildRequestOptions(kc, "/api/v1/secrets");
+export async function listSecretMetadata(kc: k8s.KubeConfig, namespace?: string): Promise<SecretMetadataItem[]> {
+  const path = namespace ? `/api/v1/namespaces/${namespace}/secrets` : "/api/v1/secrets";
+  const options = buildRequestOptions(kc, path);
   const response = await httpsGetJson<PartialListResponse>(options);
   return response.items ?? [];
 }

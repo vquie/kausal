@@ -365,6 +365,13 @@ select {
   border-bottom: 1px solid rgba(120, 138, 165, 0.12);
 }
 
+.graph-toolbar__top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
 .view-switch {
   display: inline-flex;
   padding: 4px;
@@ -385,6 +392,22 @@ select {
 .view-switch button.active,
 .detail-tabs button.active {
   background: rgba(25, 74, 166, 0.7);
+  color: #eff6ff;
+}
+
+.graph-scope-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #91a2bd;
+  font-size: 0.9rem;
+}
+
+.graph-scope-select select {
+  border: 1px solid rgba(120, 138, 165, 0.18);
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(16, 21, 33, 0.94);
   color: #eff6ff;
 }
 
@@ -410,7 +433,22 @@ select {
 }
 
 .graph-stage {
+  position: relative;
   min-height: 520px;
+}
+
+.graph-notice {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 4;
+  max-width: 300px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(9, 14, 24, 0.92);
+  border: 1px solid rgba(120, 138, 165, 0.18);
+  color: #c8d7ee;
+  font-size: 0.84rem;
 }
 
 .graph-stage .react-flow {
@@ -686,5 +724,10 @@ select {
 
   .graph-stage {
     min-height: 460px;
+  }
+
+  .graph-toolbar__top {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

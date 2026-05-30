@@ -23,7 +23,8 @@ app.get("/api/healthz", async (_req, res) => {
 
 app.get("/api/resources", async (_req, res) => {
   try {
-    res.json(await resourceService.getResources());
+    const namespace = typeof _req.query.namespace === "string" && _req.query.namespace !== "all" ? _req.query.namespace : undefined;
+    res.json(await resourceService.getResources(namespace));
   } catch (error) {
     res.status(500).json({
       error: error instanceof Error ? error.message : "Failed to load resources"
@@ -33,7 +34,18 @@ app.get("/api/resources", async (_req, res) => {
 
 app.get("/api/graph", async (_req, res) => {
   try {
-    res.json(await resourceService.snapshot());
+    const namespace = typeof _req.query.namespace === "string" && _req.query.namespace !== "all" ? _req.query.namespace : undefined;
+    const focusId = typeof _req.query.focusId === "string" ? _req.query.focusId : undefined;
+    const parsedDepth = Number(_req.query.depth);
+    const parsedLimit = Number(_req.query.limit);
+    res.json(
+      await resourceService.snapshot({
+        namespace,
+        focusId,
+        depth: Number.isFinite(parsedDepth) ? parsedDepth : undefined,
+        limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined
+      })
+    );
   } catch (error) {
     res.status(500).json({
       error: error instanceof Error ? error.message : "Failed to build graph"
