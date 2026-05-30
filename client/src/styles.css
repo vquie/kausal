@@ -183,7 +183,7 @@ select {
 .metric-row {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .metric-card,
@@ -196,8 +196,8 @@ select {
 }
 
 .metric-card {
-  min-height: 66px;
-  padding: 12px 14px;
+  min-height: 58px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -206,11 +206,11 @@ select {
 
 .metric-card span {
   color: #91a2bd;
-  font-size: 0.84rem;
+  font-size: 0.78rem;
 }
 
 .metric-card strong {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 
@@ -233,10 +233,22 @@ select {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 300px;
+  grid-template-columns: 280px minmax(0, 1.8fr) 280px;
   gap: 10px;
   min-height: 0;
   height: 100%;
+}
+
+.dashboard-grid--no-left {
+  grid-template-columns: minmax(0, 1.8fr) 280px;
+}
+
+.dashboard-grid--no-right {
+  grid-template-columns: 280px minmax(0, 1.8fr);
+}
+
+.dashboard-grid--graph-only {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .panel {
@@ -254,6 +266,10 @@ select {
 .detail-header {
   padding: 14px 14px 10px;
   border-bottom: 1px solid rgb(120 138 165 / 12%);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .panel-heading h2,
@@ -266,6 +282,46 @@ select {
   margin: 4px 0 0;
   color: #7f91ad;
   font-size: 0.8rem;
+}
+
+.panel-toggle,
+.toolbar-chip {
+  border: 1px solid rgb(120 138 165 / 18%);
+  border-radius: 10px;
+  background: rgb(14 19 31 / 88%);
+  color: #dbe8ff;
+}
+
+.panel-toggle {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+}
+
+.toolbar-chip {
+  padding: 7px 10px;
+  font-size: 0.82rem;
+}
+
+.panel-peek {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid rgb(120 138 165 / 18%);
+  border-radius: 10px;
+  background: rgb(14 19 31 / 88%);
+  color: #dbe8ff;
+}
+
+.panel-peek strong {
+  font-size: 0.9rem;
+}
+
+.panel-peek span {
+  color: #8fa4c7;
+  font-size: 0.76rem;
 }
 
 .search-shell {
@@ -386,6 +442,15 @@ select {
   justify-content: space-between;
   gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.graph-toolbar__cluster,
+.graph-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .view-switch {
@@ -430,10 +495,10 @@ select {
 .graph-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 8px;
   color: #8093b0;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
 }
 
 .graph-summary span {
@@ -444,9 +509,9 @@ select {
 }
 
 .graph-hint {
-  margin: 10px 0 0;
+  margin: 8px 0 0;
   color: #7f91ad;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
 }
 
 .edge-legend {
@@ -481,13 +546,13 @@ select {
   top: 12px;
   right: 12px;
   z-index: 4;
-  max-width: 300px;
-  padding: 10px 12px;
+  max-width: 240px;
+  padding: 8px 10px;
   border-radius: 12px;
   background: rgb(9 14 24 / 92%);
   border: 1px solid rgb(120 138 165 / 18%);
   color: #c8d7ee;
-  font-size: 0.84rem;
+  font-size: 0.76rem;
 }
 
 .graph-stage .react-flow {
@@ -780,7 +845,12 @@ select {
   }
 
   .dashboard-grid {
-    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  .dashboard-grid--no-left,
+  .dashboard-grid--graph-only {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .detail-panel {
@@ -830,6 +900,11 @@ select {
   .resource-panel,
   .graph-panel,
   .detail-panel {
+    display: block;
+  }
+
+  .panel--collapsed .panel-heading > div,
+  .panel--collapsed .detail-header__title > div:last-child {
     display: block;
   }
 

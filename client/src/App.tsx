@@ -374,6 +374,25 @@ export function App() {
   const [centerViewMode, setCenterViewMode] = useState<CenterViewMode>("graph");
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("overview");
   const [graphDepth, setGraphDepth] = useState<GraphDepth>("2");
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [insightsCollapsed, setInsightsCollapsed] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 1510px)");
+    const syncLayout = () => {
+      const compact = mediaQuery.matches;
+      setLeftCollapsed(compact);
+      setRightCollapsed(compact);
+      setInsightsCollapsed(compact);
+    };
+
+    syncLayout();
+    mediaQuery.addEventListener("change", syncLayout);
+    return () => {
+      mediaQuery.removeEventListener("change", syncLayout);
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -620,8 +639,19 @@ export function App() {
             </div>
           </section>
 
-          <main className="dashboard-grid">
-            <aside className="panel resource-panel">
+          <main
+            className={`dashboard-grid ${
+              leftCollapsed && rightCollapsed
+                ? "dashboard-grid--graph-only"
+                : leftCollapsed
+                  ? "dashboard-grid--no-left"
+                  : rightCollapsed
+                    ? "dashboard-grid--no-right"
+                    : ""
+            }`}
+          >
+            {!leftCollapsed ? (
+              <aside className="panel resource-panel">
               <div className="panel-heading">
                 <div>
                   <h2>Resources</h2>
@@ -629,6 +659,14 @@ export function App() {
                     {visibleNodes.length} shown{visibleNodes.length !== metrics.resources ? ` of ${metrics.resources}` : ""}
                   </p>
                 </div>
+                <button
+                  type="button"
+                  className="panel-toggle"
+                  onClick={() => setLeftCollapsed((value) => !value)}
+                  aria-label="Collapse resources panel"
+                >
+                  <span aria-hidden="true">{"<"}</span>
+                </button>
               </div>
               <div className="search-shell">
                 <input
@@ -663,33 +701,67 @@ export function App() {
                 })}
               </div>
             </aside>
+            ) : null}
 
             <section className="panel graph-panel">
               <div className="graph-toolbar">
                 <div className="graph-toolbar__top">
-                  <div className="view-switch">
-                    <button
-                      type="button"
-                      className={centerViewMode === "graph" ? "active" : ""}
-                      onClick={() => setCenterViewMode("graph")}
-                    >
-                      Graph view
-                    </button>
-                    <button
-                      type="button"
-                      className={centerViewMode === "list" ? "active" : ""}
-                      onClick={() => setCenterViewMode("list")}
-                    >
-                      List view
-                    </button>
+                  <div className="graph-toolbar__cluster">
+                    {leftCollapsed ? (
+                      <button
+                        type="button"
+                        className="panel-peek panel-peek--left"
+                        onClick={() => setLeftCollapsed(false)}
+                        aria-label="Expand resources panel"
+                      >
+                        <strong>{metrics.resources}</strong>
+                        <span>Resources</span>
+                      </button>
+                    ) : null}
+                    <div className="view-switch">
+                      <button
+                        type="button"
+                        className={centerViewMode === "graph" ? "active" : ""}
+                        onClick={() => setCenterViewMode("graph")}
+                      >
+                        Graph view
+                      </button>
+                      <button
+                        type="button"
+                        className={centerViewMode === "list" ? "active" : ""}
+                        onClick={() => setCenterViewMode("list")}
+                      >
+                        List view
+                      </button>
+                    </div>
                   </div>
-                  <label className="graph-scope-select">
-                    <span>Scope</span>
-                    <select value={graphDepth} onChange={(event) => setGraphDepth(event.target.value as GraphDepth)}>
-                      <option value="1">Direct relations</option>
-                      <option value="2">Two hops</option>
-                    </select>
-                  </label>
+                  <div className="graph-toolbar__actions">
+                    <label className="graph-scope-select">
+                      <span>Scope</span>
+                      <select value={graphDepth} onChange={(event) => setGraphDepth(event.target.value as GraphDepth)}>
+                        <option value="1">Direct relations</option>
+                        <option value="2">Two hops</option>
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      className="toolbar-chip"
+                      onClick={() => setInsightsCollapsed((value) => !value)}
+                    >
+                      {insightsCollapsed ? "Show insights" : "Hide insights"}
+                    </button>
+                    {rightCollapsed && selected ? (
+                      <button
+                        type="button"
+                        className="panel-peek panel-peek--right"
+                        onClick={() => setRightCollapsed(false)}
+                        aria-label="Expand detail panel"
+                      >
+                        <strong>{(kindMeta[selected.kind] ?? kindMeta.Namespace).icon}</strong>
+                        <span>{selected.kind}</span>
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="graph-summary">
                   <span>{graphNodes.length} nodes in focus</span>
@@ -767,29 +839,32 @@ export function App() {
                 </div>
               )}
 
-              <div className="issue-strip">
-                {issueCards.length > 0 ? (
-                  issueCards.map((card) => (
-                    <button
-                      key={card.id}
-                      type="button"
-                      className={`issue-card issue-card--${card.severity}`}
-                      onClick={() => setSelectedId(card.id)}
-                    >
-                      <div className="issue-card__title">{card.title}</div>
-                      <p>{card.detail}</p>
-                    </button>
-                  ))
-                ) : (
-                  <div className="issue-card issue-card--clear">
-                    <div className="issue-card__title">No active issues</div>
-                    <p>The current namespace filter does not expose resource warnings.</p>
-                  </div>
-                )}
-              </div>
+              {!insightsCollapsed ? (
+                <div className="issue-strip">
+                  {issueCards.length > 0 ? (
+                    issueCards.map((card) => (
+                      <button
+                        key={card.id}
+                        type="button"
+                        className={`issue-card issue-card--${card.severity}`}
+                        onClick={() => setSelectedId(card.id)}
+                      >
+                        <div className="issue-card__title">{card.title}</div>
+                        <p>{card.detail}</p>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="issue-card issue-card--clear">
+                      <div className="issue-card__title">No active issues</div>
+                      <p>The current namespace filter does not expose resource warnings.</p>
+                    </div>
+                  )}
+                </div>
+              ) : null}
             </section>
 
-            <aside className="panel detail-panel">
+            {!rightCollapsed ? (
+              <aside className="panel detail-panel">
               <div className="detail-header">
                 <div className="detail-header__title">
                   <div
@@ -808,32 +883,38 @@ export function App() {
                     </span>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  className="panel-toggle"
+                  onClick={() => setRightCollapsed((value) => !value)}
+                  aria-label="Collapse detail panel"
+                >
+                  <span aria-hidden="true">{">"}</span>
+                </button>
               </div>
-
               <div className="detail-tabs">
-                <button
-                  type="button"
-                  className={inspectorTab === "overview" ? "active" : ""}
-                  onClick={() => setInspectorTab("overview")}
-                >
-                  Overview
-                </button>
-                <button
-                  type="button"
-                  className={inspectorTab === "yaml" ? "active" : ""}
-                  onClick={() => setInspectorTab("yaml")}
-                >
-                  YAML
-                </button>
-                <button
-                  type="button"
-                  className={inspectorTab === "events" ? "active" : ""}
-                  onClick={() => setInspectorTab("events")}
-                >
-                  Events
-                </button>
-              </div>
-
+                    <button
+                      type="button"
+                      className={inspectorTab === "overview" ? "active" : ""}
+                      onClick={() => setInspectorTab("overview")}
+                    >
+                      Overview
+                    </button>
+                    <button
+                      type="button"
+                      className={inspectorTab === "yaml" ? "active" : ""}
+                      onClick={() => setInspectorTab("yaml")}
+                    >
+                      YAML
+                    </button>
+                    <button
+                      type="button"
+                      className={inspectorTab === "events" ? "active" : ""}
+                      onClick={() => setInspectorTab("events")}
+                    >
+                      Events
+                    </button>
+                  </div>
               {selected ? (
                 <div className="detail-content">
                   {inspectorTab === "overview" ? (
@@ -965,6 +1046,7 @@ export function App() {
                 </div>
               )}
             </aside>
+            ) : null}
           </main>
         </>
       ) : (
