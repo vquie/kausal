@@ -5,7 +5,7 @@
     "config:best-practices",
     "schedule:weekdays",
     ":noUnscheduledUpdates",
-    "mergeConfidence:all-badges",
+    "mergeConfidence:all-badges"
   ],
   "semanticCommits": "enabled",
   "separateMajorMinor": true,
