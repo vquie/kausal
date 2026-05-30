@@ -5,7 +5,8 @@
     "config:best-practices",
     "schedule:weekdays",
     ":noUnscheduledUpdates",
-    "mergeConfidence:all-badges"
+    "mergeConfidence:all-badges",
+    ":disableMajorUpdates"
   ],
   "semanticCommits": "enabled",
   "vulnerabilityAlerts": {
