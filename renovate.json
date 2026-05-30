@@ -13,8 +13,5 @@
       "security"
     ]
   },
-  "addLabels": [
-    "type::{{updateType}}"
-  ],
   "dependencyDashboardOSVVulnerabilitySummary": "all"
 }
