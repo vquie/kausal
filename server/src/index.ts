@@ -69,7 +69,7 @@ app.get("/api/resource/:namespace/:kind/:name", async (req, res) => {
 });
 
 app.use(express.static(clientDistPath));
-app.get("*", (req, res, next) => {
+app.use((req, res, next) => {
   if (req.path.startsWith("/api/")) {
     next();
     return;
