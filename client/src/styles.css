@@ -19,10 +19,12 @@ body,
 #root {
   margin: 0;
   min-height: 100vh;
+  height: 100%;
 }
 
 body {
   background: #05080f;
+  overflow: hidden;
 }
 
 button,
@@ -40,8 +42,11 @@ select {
 
 .app-shell {
   position: relative;
-  min-height: 100vh;
-  padding: 14px 12px 18px;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
   overflow: hidden;
 }
 
@@ -81,7 +86,7 @@ select {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 6px 6px 16px;
+  padding: 4px 4px 0;
 }
 
 .brand-block {
@@ -150,7 +155,7 @@ select {
 }
 
 .brand-title {
-  font-size: 2.05rem;
+  font-size: clamp(1.5rem, 2vw, 1.9rem);
   font-weight: 800;
   letter-spacing: -0.04em;
 }
@@ -158,7 +163,7 @@ select {
 .brand-block p {
   margin: 2px 0 0;
   color: #8fa4c7;
-  font-size: 0.94rem;
+  font-size: 0.88rem;
 }
 
 .hero-actions {
@@ -177,10 +182,8 @@ select {
 
 .metric-row {
   display: grid;
-  grid-template-columns: 1.15fr 1.15fr repeat(4, minmax(0, 0.72fr));
-  gap: 12px;
-  margin-bottom: 14px;
-  padding-left: 380px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .metric-card,
@@ -193,8 +196,8 @@ select {
 }
 
 .metric-card {
-  min-height: 74px;
-  padding: 14px 16px;
+  min-height: 66px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -207,7 +210,7 @@ select {
 }
 
 .metric-card strong {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 800;
 }
 
@@ -230,9 +233,10 @@ select {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 342px minmax(0, 1fr) 322px;
+  grid-template-columns: 300px minmax(0, 1fr) 300px;
   gap: 10px;
-  min-height: calc(100vh - 176px);
+  min-height: 0;
+  height: 100%;
 }
 
 .panel {
@@ -240,20 +244,32 @@ select {
   overflow: hidden;
 }
 
+.resource-panel,
+.detail-panel {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
 .panel-heading,
 .detail-header {
-  padding: 16px 16px 12px;
+  padding: 14px 14px 10px;
   border-bottom: 1px solid rgb(120 138 165 / 12%);
 }
 
 .panel-heading h2,
 .detail-header h2 {
   margin: 0;
-  font-size: 1.08rem;
+  font-size: 1rem;
+}
+
+.panel-subtitle {
+  margin: 4px 0 0;
+  color: #7f91ad;
+  font-size: 0.8rem;
 }
 
 .search-shell {
-  padding: 14px 12px 10px;
+  padding: 10px 12px;
 }
 
 .search-shell input {
@@ -271,9 +287,9 @@ select {
 }
 
 .resource-list {
-  height: calc(100% - 80px);
   overflow: auto;
-  padding: 0 10px 12px;
+  min-height: 0;
+  padding: 0 10px 10px;
 }
 
 .resource-card {
@@ -361,7 +377,7 @@ select {
 }
 
 .graph-toolbar {
-  padding: 12px 14px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid rgb(120 138 165 / 12%);
 }
 
@@ -411,11 +427,27 @@ select {
   color: #eff6ff;
 }
 
+.graph-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+  color: #8093b0;
+  font-size: 0.8rem;
+}
+
+.graph-summary span {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgb(15 21 33 / 88%);
+  border: 1px solid rgb(120 138 165 / 12%);
+}
+
 .edge-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
-  margin-top: 12px;
+  gap: 14px;
+  margin-top: 10px;
 }
 
 .edge-legend__item {
@@ -434,7 +466,8 @@ select {
 
 .graph-stage {
   position: relative;
-  min-height: 520px;
+  min-height: 0;
+  height: 100%;
 }
 
 .graph-notice {
@@ -491,7 +524,7 @@ select {
 }
 
 .relation-list {
-  padding: 16px;
+  padding: 14px;
   overflow: auto;
   display: grid;
   align-content: start;
@@ -543,8 +576,9 @@ select {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  padding: 12px;
+  padding: 10px;
   border-top: 1px solid rgb(120 138 165 / 12%);
+  overflow: auto hidden;
 }
 
 .issue-card {
@@ -592,14 +626,14 @@ select {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  padding: 12px;
+  padding: 10px 12px;
   border-bottom: 1px solid rgb(120 138 165 / 12%);
 }
 
 .detail-content {
-  height: calc(100% - 122px);
   overflow: auto;
-  padding: 14px 16px 18px;
+  min-height: 0;
+  padding: 12px 14px 16px;
 }
 
 .detail-content section + section {
@@ -679,11 +713,11 @@ select {
 }
 
 .empty-shell {
-  min-height: 320px;
+  min-height: 220px;
   display: grid;
   place-items: center;
   text-align: center;
-  padding: 32px;
+  padding: 24px;
 }
 
 .empty-shell--center {
@@ -692,7 +726,6 @@ select {
 
 @media (width <= 1380px) {
   .metric-row {
-    padding-left: 0;
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -702,13 +735,30 @@ select {
 
   .detail-panel {
     grid-column: 1 / -1;
-    min-height: 460px;
+    min-height: 0;
+  }
+
+  .issue-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (width <= 980px) {
+  html,
+  body,
+  #root {
+    height: auto;
+  }
+
+  body {
+    overflow: auto;
+  }
+
   .app-shell {
     padding: 10px;
+    height: auto;
+    min-height: 100vh;
+    grid-template-rows: auto auto auto;
   }
 
   .hero-bar {
@@ -722,8 +772,22 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .dashboard-grid {
+    height: auto;
+  }
+
+  .resource-panel,
+  .graph-panel,
+  .detail-panel {
+    display: block;
+  }
+
+  .resource-list {
+    max-height: 42vh;
+  }
+
   .graph-stage {
-    min-height: 460px;
+    min-height: 54vh;
   }
 
   .graph-toolbar__top {

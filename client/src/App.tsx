@@ -496,7 +496,12 @@ export function App() {
           <main className="dashboard-grid">
             <aside className="panel resource-panel">
               <div className="panel-heading">
-                <h2>Resources</h2>
+                <div>
+                  <h2>Resources</h2>
+                  <p className="panel-subtitle">
+                    {visibleNodes.length} shown{visibleNodes.length !== metrics.resources ? ` of ${metrics.resources}` : ""}
+                  </p>
+                </div>
               </div>
               <div className="search-shell">
                 <input
@@ -558,6 +563,11 @@ export function App() {
                       <option value="2">Two hops</option>
                     </select>
                   </label>
+                </div>
+                <div className="graph-summary">
+                  <span>{graphNodes.length} nodes in focus</span>
+                  <span>{filteredEdges.length} edges</span>
+                  {loadingGraph ? <span>Updating graph...</span> : null}
                 </div>
                 <div className="edge-legend">
                   {Object.entries(edgeMeta).map(([key, value]) => (
