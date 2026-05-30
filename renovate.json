@@ -6,9 +6,10 @@
     "schedule:weekdays",
     ":noUnscheduledUpdates",
     "mergeConfidence:all-badges",
-    ":disableMajorUpdates"
   ],
   "semanticCommits": "enabled",
+  "separateMajorMinor": true,
+  "separateMinorPatch": true,
   "vulnerabilityAlerts": {
     "addLabels": [
       "security"
