@@ -170,7 +170,22 @@ function podTemplateRefs(resource: V1Deployment | V1ReplicaSet | V1Pod): Array<{
 }
 
 function toNode(resource: AnyKubeResource, kind: ResourceNode["kind"], namespaceOverride?: string | null): ResourceNode {
-  const metadata = resource.metadata ?? {};
+  const metadata = (resource.metadata ?? {}) as {
+    namespace?: string;
+    name?: string;
+    uid?: string;
+    creationTimestamp?: string | Date;
+    labels?: Record<string, string>;
+    annotations?: Record<string, string>;
+    ownerReferences?: Array<{
+      apiVersion?: string;
+      kind?: string;
+      name?: string;
+      uid?: string;
+      controller?: boolean;
+    }>;
+    managedFields?: Array<Record<string, unknown>>;
+  };
   const namespace = namespaceOverride ?? metadata.namespace ?? null;
   const name = metadata.name ?? "unknown";
   return {
@@ -179,10 +194,12 @@ function toNode(resource: AnyKubeResource, kind: ResourceNode["kind"], namespace
     apiVersion: resource.apiVersion ?? "unknown",
     name,
     namespace,
+    uid: metadata.uid,
+    createdAt: metadata.creationTimestamp ? new Date(metadata.creationTimestamp).toISOString() : undefined,
     labels: normalizeLabels(metadata.labels),
     annotations: normalizeAnnotations(metadata.annotations),
     ownerReferences: ownerReferences(metadata.ownerReferences),
-    managers: summarizeManagedFields(metadata.managedFields as Array<Record<string, unknown>> | undefined),
+    managers: summarizeManagedFields(metadata.managedFields),
     relations: [],
     insights: []
   };

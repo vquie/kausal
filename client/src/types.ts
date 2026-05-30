@@ -11,6 +11,8 @@ export interface ResourceNode {
   apiVersion: string;
   name: string;
   namespace: string | null;
+  uid?: string;
+  createdAt?: string;
   labels: Record<string, string>;
   annotations: Record<string, string>;
   ownerReferences: Array<{
@@ -43,4 +45,3 @@ export interface GraphResponse {
   generatedAt: string;
   warnings: string[];
 }
-
