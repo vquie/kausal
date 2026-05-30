@@ -17,4 +17,3 @@ spec:
                 name: kausal
                 port:
                   number: 8080
-
