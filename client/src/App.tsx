@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Background,
+  Controls,
+  Handle,
   MarkerType,
-  MiniMap,
+  Position,
   ReactFlow,
   type Edge,
   type Node,
@@ -101,7 +103,8 @@ function sortNodes(nodes: ResourceNode[]) {
 }
 
 function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], selectedId: string | null) {
-  const laneOrder = [
+  const kindOrder = [
+    "Namespace",
     "Ingress",
     "Service",
     "Deployment",
@@ -109,23 +112,65 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
     "ReplicaSet",
     "Pod",
     "ConfigMap",
-    "Secret",
-    "Namespace"
+    "Secret"
   ];
 
-  const columns = new Map<string, ResourceNode[]>();
-  for (const node of nodes) {
-    if (!columns.has(node.kind)) {
-      columns.set(node.kind, []);
+  const adjacency = new Map<string, Set<string>>();
+  for (const edge of edges) {
+    if (!adjacency.has(edge.source)) {
+      adjacency.set(edge.source, new Set());
     }
-    columns.get(node.kind)!.push(node);
+    if (!adjacency.has(edge.target)) {
+      adjacency.set(edge.target, new Set());
+    }
+    adjacency.get(edge.source)!.add(edge.target);
+    adjacency.get(edge.target)!.add(edge.source);
   }
 
+  const distanceById = new Map<string, number>();
+  if (selectedId) {
+    const queue: Array<{ id: string; distance: number }> = [{ id: selectedId, distance: 0 }];
+    distanceById.set(selectedId, 0);
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      for (const neighborId of adjacency.get(current.id) ?? []) {
+        if (distanceById.has(neighborId)) {
+          continue;
+        }
+        distanceById.set(neighborId, current.distance + 1);
+        queue.push({ id: neighborId, distance: current.distance + 1 });
+      }
+    }
+  }
+
+  const columns = new Map<number, ResourceNode[]>();
+  for (const node of nodes) {
+    const distance = distanceById.get(node.id) ?? (selectedId ? 99 : kindOrder.indexOf(node.kind));
+    if (!columns.has(distance)) {
+      columns.set(distance, []);
+    }
+    columns.get(distance)!.push(node);
+  }
+
+  const orderedColumns = [...columns.entries()].sort(([left], [right]) => left - right);
   const flowNodes: Node[] = [];
-  laneOrder.forEach((kind, columnIndex) => {
-    const items = sortNodes(columns.get(kind) ?? []);
-    const totalHeight = Math.max((items.length - 1) * 148, 0);
-    items.forEach((item, itemIndex) => {
+
+  orderedColumns.forEach(([distance, items], columnIndex) => {
+    const sortedItems = [...items].sort((left, right) => {
+      const kindDelta = kindOrder.indexOf(left.kind) - kindOrder.indexOf(right.kind);
+      if (kindDelta !== 0) {
+        return kindDelta;
+      }
+      const relationDelta = right.relations.length - left.relations.length;
+      if (relationDelta !== 0) {
+        return relationDelta;
+      }
+      return left.name.localeCompare(right.name);
+    });
+
+    const totalHeight = Math.max((sortedItems.length - 1) * 150, 0);
+    sortedItems.forEach((item, itemIndex) => {
       const meta = kindMeta[item.kind] ?? kindMeta.Namespace;
       const isSelected = item.id === selectedId;
       flowNodes.push({
@@ -137,14 +182,15 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
           accent: meta.accent,
           tint: meta.tint,
           icon: meta.icon,
-          issues: countIssues(item)
+          issues: countIssues(item),
+          depth: distance === 99 ? "related" : distance === 0 ? "focus" : `hop ${distance}`
         },
         position: {
-          x: columnIndex * 250,
-          y: itemIndex * 148 - totalHeight / 2
+          x: columnIndex * 270,
+          y: itemIndex * 150 - totalHeight / 2
         },
         style: {
-          width: 198,
+          width: 210,
           borderRadius: 18,
           border: `1px solid ${isSelected ? meta.accent : "rgba(148, 163, 184, 0.18)"}`,
           background: `linear-gradient(180deg, ${meta.tint}, rgba(9, 14, 24, 0.96))`,
@@ -174,11 +220,12 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
       },
       style: {
         stroke: edgeMeta[edge.type]?.color ?? "#94a3b8",
-        strokeWidth: 2
+        strokeWidth: edge.type === "owns" ? 3.5 : 2.6
       },
       labelStyle: {
         fill: edgeMeta[edge.type]?.color ?? "#cbd5e1",
-        fontSize: 11
+        fontSize: 11,
+        fontWeight: 700
       }
     }));
 
@@ -188,14 +235,17 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
 function ResourceFlowNode({ data }: { data: Record<string, string | number> }) {
   return (
     <div className="flow-card">
+      <Handle type="target" position={Position.Left} className="flow-handle" />
       <div className="flow-card__icon" style={{ backgroundColor: String(data.tint), color: String(data.accent) }}>
         {data.icon}
       </div>
       <div className="flow-card__body">
         <strong>{String(data.name)}</strong>
         <span>{String(data.kind)}</span>
+        <small>{String(data.depth)}</small>
       </div>
       {Number(data.issues) > 0 ? <div className="flow-card__badge">{Number(data.issues)}</div> : null}
+      <Handle type="source" position={Position.Right} className="flow-handle" />
     </div>
   );
 }
@@ -246,7 +296,7 @@ export function App() {
   const [highlightMode, setHighlightMode] = useState<HighlightMode>("issues");
   const [centerViewMode, setCenterViewMode] = useState<CenterViewMode>("graph");
   const [inspectorTab, setInspectorTab] = useState<InspectorTab>("overview");
-  const [graphDepth, setGraphDepth] = useState<GraphDepth>("1");
+  const [graphDepth, setGraphDepth] = useState<GraphDepth>("2");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -596,16 +646,20 @@ export function App() {
                     </div>
                   ) : null}
                   <ReactFlow
+                    key={`${selectedId ?? "none"}-${graphDepth}-${graphNodes.length}-${filteredEdges.length}`}
                     nodes={flow.nodes.map((node) => ({ ...node, type: "resource" }))}
                     edges={flow.edges}
                     nodeTypes={nodeTypes}
                     fitView
+                    fitViewOptions={{ padding: 0.22 }}
                     onNodeClick={handleNodeClick}
                     nodesDraggable={false}
+                    zoomOnScroll
+                    panOnDrag
                     defaultEdgeOptions={{ zIndex: 1 }}
                     proOptions={{ hideAttribution: true }}
                   >
-                    <MiniMap pannable zoomable nodeColor={(node) => String(node.data?.accent ?? "#334155")} />
+                    <Controls showInteractive={false} fitViewOptions={{ padding: 0.22 }} />
                     <Background color="rgba(51, 65, 85, 0.5)" gap={24} />
                   </ReactFlow>
                 </div>

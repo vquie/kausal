@@ -497,7 +497,22 @@ select {
   border-radius: 12px;
 }
 
+.graph-stage .react-flow__controls {
+  box-shadow: 0 12px 28px rgb(2 6 23 / 38%);
+  border: 1px solid rgb(120 138 165 / 14%);
+  overflow: hidden;
+}
+
+.graph-stage .react-flow__controls-button {
+  width: 34px;
+  height: 34px;
+  border-bottom: 1px solid rgb(120 138 165 / 12%);
+  background: rgb(12 17 27 / 92%);
+  color: #dbe8ff;
+}
+
 .flow-card {
+  position: relative;
   display: grid;
   grid-template-columns: 38px minmax(0, 1fr) auto;
   gap: 12px;
@@ -510,7 +525,8 @@ select {
 }
 
 .flow-card__body strong,
-.flow-card__body span {
+.flow-card__body span,
+.flow-card__body small {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -521,6 +537,22 @@ select {
   margin-top: 2px;
   color: #9fb0ca;
   font-size: 0.84rem;
+}
+
+.flow-card__body small {
+  margin-top: 4px;
+  color: #7c90af;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.flow-handle {
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  border: 0;
+  background: transparent;
 }
 
 .relation-list {
@@ -573,19 +605,20 @@ select {
 }
 
 .issue-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  padding: 10px;
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px 10px;
   border-top: 1px solid rgb(120 138 165 / 12%);
   overflow: auto hidden;
 }
 
 .issue-card {
+  min-width: 220px;
+  max-width: 280px;
   border: 1px solid rgb(120 138 165 / 14%);
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgb(14 19 31 / 84%);
-  padding: 12px;
+  padding: 10px 12px;
   color: inherit;
   text-align: left;
 }
@@ -605,11 +638,14 @@ select {
 
 .issue-card__title {
   font-weight: 700;
+  font-size: 0.98rem;
 }
 
 .issue-card p {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   color: #9fb0ca;
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .detail-header__title {
@@ -739,6 +775,7 @@ select {
   }
 
   .issue-strip {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -788,6 +825,10 @@ select {
 
   .graph-stage {
     min-height: 54vh;
+  }
+
+  .issue-strip {
+    display: flex;
   }
 
   .graph-toolbar__top {
