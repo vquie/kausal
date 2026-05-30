@@ -7,7 +7,7 @@ const app = express();
 const port = Number(process.env.PORT || 8080);
 const resourceService = new ResourceService();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const clientDistPath = path.resolve(__dirname, "../../../client/dist");
+const clientDistPath = path.resolve(__dirname, "../../client/dist");
 
 app.get("/api/healthz", async (_req, res) => {
   try {
@@ -68,4 +68,3 @@ app.get("*", (req, res, next) => {
 app.listen(port, () => {
   console.log(`Kausal server listening on port ${port}`);
 });
-
