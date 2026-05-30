@@ -6,3 +6,4 @@ coverage
 .npm-cache
 server/dist
 client/dist
+megalinter-reports/
