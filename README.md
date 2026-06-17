@@ -74,6 +74,39 @@ From the repository root:
 docker build -t kausal:dev .
 ```
 
+## Release flow
+
+Pushing a Git tag triggers the GitHub release workflow in `.github/workflows/release.yml`.
+
+The workflow:
+
+- builds the root `Dockerfile`
+- pushes the image to `ghcr.io/vquie/kausal` with version aliases
+- creates a GitHub release
+- generates release notes from the changes since the previous tag
+
+Supported release tags:
+
+- `v1.2.3`
+- `1.2.3`
+
+For either form, the workflow publishes:
+
+- `v1.2.3`
+- `v1.2`
+- `v1`
+- `1.2.3`
+- `1.2`
+- `1`
+- `latest`
+
+Example:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
 ## Make the image available to OrbStack Kubernetes
 
 OrbStack usually exposes the local Docker image store directly to its Kubernetes cluster. If your local OrbStack setup uses the same image store, no extra import step is needed after `docker build`.
