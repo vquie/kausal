@@ -689,9 +689,19 @@ select {
 .graph-stage .react-flow__controls-button {
   width: 34px;
   height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
   border-bottom: 1px solid rgb(226 232 240 / 92%);
   background: rgb(255 252 246 / 96%);
   color: #334155;
+}
+
+.graph-stage .react-flow__controls-button svg {
+  width: 16px;
+  height: 16px;
 }
 
 .flow-card {
