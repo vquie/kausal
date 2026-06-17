@@ -543,7 +543,7 @@ export function App() {
       const compact = mediaQuery.matches;
       setLeftCollapsed(compact);
       setRightCollapsed(compact);
-      setInsightsCollapsed(compact);
+      setInsightsCollapsed(true);
     };
 
     syncLayout();
