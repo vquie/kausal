@@ -18,6 +18,41 @@ type CenterViewMode = "graph" | "list";
 type InspectorTab = "overview" | "yaml" | "events";
 type GraphDepth = "1" | "2";
 
+const metricHelp = {
+  namespace: "Limits the explorer to one namespace or shows the whole cluster.",
+  highlight: "Emphasizes resources that match the selected signal, such as issues or references.",
+  resources: "Total number of resources currently loaded into the explorer.",
+  issues: "Resources with noteworthy warnings, missing links, or unusual ownership and manager patterns.",
+  managers: "Distinct field managers observed in Kubernetes managedFields for the current result set.",
+  lastSync: "How long ago the resource and graph data were fetched from the Kubernetes API."
+} as const;
+
+function MetricHelpButton({ help, label }: { help: string; label: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span className="metric-help-wrap">
+      <button
+        type="button"
+        className="metric-help"
+        aria-label={label}
+        aria-expanded={open}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+      >
+        ?
+      </button>
+      {open ? (
+        <div className="metric-help__tooltip" role="tooltip">
+          {help}
+        </div>
+      ) : null}
+    </span>
+  );
+}
+
 const edgeMeta: Record<string, { color: string; label: string }> = {
   owns: { color: "#0f766e", label: "Owns" },
   selects: { color: "#2f855a", label: "Selects" },
@@ -698,7 +733,10 @@ export function App() {
               <div className="graph-toolbar">
                 <section className="metric-row graph-toolbar__metrics">
                   <label className="metric-card metric-card--select">
-                    <span>Namespace</span>
+                    <span className="metric-card__heading">
+                      <span>Namespace</span>
+                      <MetricHelpButton help={metricHelp.namespace} label="Explain namespace filter" />
+                    </span>
                     <select value={namespaceFilter} onChange={(event) => setNamespaceFilter(event.target.value)}>
                       {namespaces.map((value) => (
                         <option key={value} value={value}>
@@ -708,7 +746,10 @@ export function App() {
                     </select>
                   </label>
                   <label className="metric-card metric-card--select">
-                    <span>Highlight</span>
+                    <span className="metric-card__heading">
+                      <span>Highlight</span>
+                      <MetricHelpButton help={metricHelp.highlight} label="Explain highlight filter" />
+                    </span>
                     <select value={highlightMode} onChange={(event) => setHighlightMode(event.target.value as HighlightMode)}>
                       <option value="all">All resources</option>
                       <option value="issues">All issues</option>
@@ -717,19 +758,31 @@ export function App() {
                     </select>
                   </label>
                   <div className="metric-card">
-                    <span>Resources</span>
+                    <span className="metric-card__heading">
+                      <span>Resources</span>
+                      <MetricHelpButton help={metricHelp.resources} label="Explain resources metric" />
+                    </span>
                     <strong>{metrics.resources}</strong>
                   </div>
                   <div className="metric-card metric-card--alert">
-                    <span>Issues</span>
+                    <span className="metric-card__heading">
+                      <span>Issues</span>
+                      <MetricHelpButton help={metricHelp.issues} label="Explain issues metric" />
+                    </span>
                     <strong>{metrics.issues}</strong>
                   </div>
                   <div className="metric-card">
-                    <span>Managers</span>
+                    <span className="metric-card__heading">
+                      <span>Managers</span>
+                      <MetricHelpButton help={metricHelp.managers} label="Explain managers metric" />
+                    </span>
                     <strong>{metrics.managers}</strong>
                   </div>
                   <div className="metric-card">
-                    <span>Last sync</span>
+                    <span className="metric-card__heading">
+                      <span>Last sync</span>
+                      <MetricHelpButton help={metricHelp.lastSync} label="Explain last sync metric" />
+                    </span>
                     <strong>{formatRelativeTime((graph ?? resourcesPayload).generatedAt)}</strong>
                   </div>
                 </section>
