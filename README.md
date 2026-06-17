@@ -1,5 +1,9 @@
 # Kausal
 
+<p align="left">
+  <img src="apps/client/src/assets/logo.png" alt="Kausal logo" width="280">
+</p>
+
 Kausal is a local-first Kubernetes visualization tool that explains why resources look the way they do by combining ownership, selector, exposure, ingress, scaling, reference, and `managedFields` data into a single graph.
 
 Kausal is published on GitHub under the MIT License.
