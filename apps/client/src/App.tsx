@@ -867,7 +867,7 @@ export function App() {
                     defaultEdgeOptions={{ zIndex: 1 }}
                     proOptions={{ hideAttribution: true }}
                   >
-                    <Controls showInteractive={false} fitViewOptions={{ padding: 0.22 }} />
+                    <Controls position="top-left" showInteractive={false} fitViewOptions={{ padding: 0.22 }} />
                     <Background color="rgba(51, 65, 85, 0.5)" gap={24} />
                   </ReactFlow>
                 </div>
