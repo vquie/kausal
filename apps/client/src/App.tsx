@@ -12,6 +12,8 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { GraphResponse, ResourceNode, ResourcesResponse } from "./types";
+import brandIcon from "./assets/icon.png";
+import brandLogo from "./assets/logo.png";
 
 type HighlightMode = "all" | "issues" | "managers" | "references";
 type CenterViewMode = "graph" | "list";
@@ -651,15 +653,12 @@ export function App() {
       <div className="ambient ambient-two" />
       <header className="hero-bar">
         <div className="brand-block">
-          <div className="brand-mark" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
+          <div className="brand-assets">
+            <img className="brand-icon" src={brandIcon} alt="Kausal icon" />
+            <img className="brand-logo" src={brandLogo} alt="Kausal" />
           </div>
           <div className="hero-copy">
             <div className="brand-eyebrow">Cluster topology explorer</div>
-            <div className="brand-title">Kausal</div>
             <p>Trace ownership, traffic and config dependencies across your Kubernetes resources.</p>
           </div>
         </div>
