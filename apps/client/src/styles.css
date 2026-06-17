@@ -773,6 +773,31 @@ select {
   filter: drop-shadow(0 1px 2px rgb(148 163 184 / 30%));
 }
 
+.graph-stage .flow-edge-hitbox {
+  cursor: help;
+}
+
+.graph-stage .flow-edge-tooltip {
+  position: absolute;
+  width: 240px;
+  min-height: 44px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  background: rgb(15 23 42 / 92%);
+  color: #f8fafc;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  white-space: normal;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  box-shadow: 0 10px 24px rgb(15 23 42 / 22%);
+  pointer-events: none;
+  z-index: 5;
+}
+
 .graph-stage .react-flow__panel,
 .graph-stage .react-flow__attribution {
   background: rgb(255 252 246 / 96%);

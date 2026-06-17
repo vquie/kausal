@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Background,
+  BaseEdge,
   Controls,
+  EdgeLabelRenderer,
   Handle,
   MarkerType,
   Position,
   ReactFlow,
+  getSmoothStepPath,
+  useViewport,
   type Edge,
+  type EdgeProps,
   type Node,
   type NodeMouseHandler
 } from "@xyflow/react";
@@ -19,6 +24,7 @@ type HighlightMode = "all" | "issues" | "managers" | "references";
 type CenterViewMode = "graph" | "list";
 type InspectorTab = "overview" | "yaml" | "events";
 type GraphDepth = "1" | "2";
+type FlowEdgeData = { tooltip: string };
 
 const metricHelp = {
   namespace: "Limits the explorer to one namespace or shows the whole cluster.",
@@ -328,7 +334,7 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
 
   const visibleIds = new Set(nodes.map((node) => node.id));
   const positionedNodes = new Map(flowNodes.map((node) => [node.id, node]));
-  const flowEdges: Edge[] = edges
+  const flowEdges: Edge<FlowEdgeData>[] = edges
     .filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target))
     .map((edge) => {
       const sourceNode = positionedNodes.get(edge.source);
@@ -360,8 +366,11 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
         sourceHandle,
         targetHandle,
         label: "",
-        type: "smoothstep",
+        type: "relation",
         animated: false,
+        data: {
+          tooltip: [edgeMeta[edge.type]?.label ?? edge.type, edge.details].filter(Boolean).join(": ")
+        },
         markerEnd: {
           type: MarkerType.ArrowClosed,
           color: edgeMeta[edge.type]?.color ?? "#94a3b8"
@@ -376,6 +385,58 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
     });
 
   return { nodes: flowNodes, edges: flowEdges };
+}
+
+function RelationFlowEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  markerEnd,
+  style,
+  data
+}: EdgeProps<Edge<FlowEdgeData>>) {
+  const [isHovered, setIsHovered] = useState(false);
+  const { zoom } = useViewport();
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition
+  });
+
+  return (
+    <>
+      <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={style} />
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={18}
+        className="flow-edge-hitbox"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      />
+      {isHovered && data?.tooltip ? (
+        <EdgeLabelRenderer>
+          <div
+            className="flow-edge-tooltip nodrag nopan"
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px) scale(${1 / zoom})`,
+              transformOrigin: "center"
+            }}
+          >
+            {data.tooltip}
+          </div>
+        </EdgeLabelRenderer>
+      ) : null}
+    </>
+  );
 }
 
 function ResourceFlowNode({ data }: { data: Record<string, string | number> }) {
@@ -438,6 +499,10 @@ function buildSyntheticYaml(node: ResourceNode) {
 
 const nodeTypes = {
   resource: ResourceFlowNode
+};
+
+const edgeTypes = {
+  relation: RelationFlowEdge
 };
 
 export function App() {
@@ -899,6 +964,7 @@ export function App() {
                     nodes={flow.nodes.map((node) => ({ ...node, type: "resource" }))}
                     edges={flow.edges}
                     nodeTypes={nodeTypes}
+                    edgeTypes={edgeTypes}
                     fitView
                     fitViewOptions={{ padding: 0.22 }}
                     onNodeClick={handleNodeClick}
