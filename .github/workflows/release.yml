@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   release:
+    name: Build, Release and Publish Image
     runs-on: ubuntu-latest
 
     steps:
@@ -20,10 +21,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Compute image tags
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute image metadata
         id: image
+        shell: bash
         run: |
-          image_name="ghcr.io/${GITHUB_REPOSITORY,,}"
+          owner="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          repo="$(echo "${GITHUB_REPOSITORY#*/}" | tr '[:upper:]' '[:lower:]')"
           raw_tag="${GITHUB_REF_NAME}"
           version="${raw_tag#v}"
 
@@ -34,27 +43,14 @@ jobs:
 
           major="${BASH_REMATCH[1]}"
           minor="${BASH_REMATCH[2]}"
-          patch="${BASH_REMATCH[3]}"
 
           {
-            echo "name=$image_name"
+            echo "name=ghcr.io/${owner}/${repo}"
             echo "version=$version"
             echo "major=$major"
             echo "minor=$minor"
-            echo "patch=$patch"
-            echo "tags<<EOF"
-            echo "$image_name:v$major.$minor.$patch"
-            echo "$image_name:v$major.$minor"
-            echo "$image_name:v$major"
-            echo "$image_name:$major.$minor.$patch"
-            echo "$image_name:$major.$minor"
-            echo "$image_name:$major"
-            echo "$image_name:latest"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+            echo "prefixed_version=v$version"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -68,85 +64,62 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=v${{ steps.image.outputs.version }}
+            type=raw,value=v${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}
+            type=raw,value=v${{ steps.image.outputs.major }}
+            type=raw,value=${{ steps.image.outputs.version }}
+            type=raw,value=${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}
+            type=raw,value=${{ steps.image.outputs.major }}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.title=Kausal
+            org.opencontainers.image.description=Local-first Kubernetes visualization MVP
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}#readme
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          annotations: |
+            org.opencontainers.image.title=Kausal
+            org.opencontainers.image.description=Local-first Kubernetes visualization MVP
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}#readme
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
 
-      - name: Build and push Docker image
+      - name: Build and push image
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.image.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Find previous tag
-        id: previous_tag
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const currentTag = context.ref.replace("refs/tags/", "");
-            const { owner, repo } = context.repo;
-            const response = await github.rest.repos.listTags({
-              owner,
-              repo,
-              per_page: 100,
-            });
-
-            const previousTag = response.data.find((tag) => tag.name !== currentTag);
-            core.setOutput("name", previousTag?.name ?? "");
-
-      - name: Generate release notes
-        id: release_notes
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const currentTag = context.ref.replace("refs/tags/", "");
-            const previousTag = `${{ steps.previous_tag.outputs.name }}`.trim();
-            const { owner, repo } = context.repo;
-
-            if (!previousTag) {
-              const notes = [
-                `## ${currentTag}`,
-                "",
-                "Initial tagged release.",
-                "",
-                "Published container tags:",
-                "",
-                "- `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.version }}`",
-                "- `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}`",
-                "- `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.major }}`",
-                "- `${{ steps.image.outputs.name }}:${{ steps.image.outputs.version }}`",
-                "- `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}`",
-                "- `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}`",
-                "- `${{ steps.image.outputs.name }}:latest`",
-              ].join("\n");
-              core.setOutput("body", notes);
-              return;
-            }
-
-            const response = await github.rest.repos.generateReleaseNotes({
-              owner,
-              repo,
-              tag_name: currentTag,
-              previous_tag_name: previousTag,
-            });
-
-            const notes = [
-              response.data.body.trim(),
-              "",
-              "Published container tags:",
-              "",
-              "- `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.version }}`",
-              "- `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}`",
-              "- `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.major }}`",
-              "- `${{ steps.image.outputs.name }}:${{ steps.image.outputs.version }}`",
-              "- `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}`",
-              "- `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}`",
-              "- `${{ steps.image.outputs.name }}:latest`",
-            ].join("\n");
-
-            core.setOutput("body", notes);
+          annotations: ${{ steps.meta.outputs.annotations }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          body: ${{ steps.release_notes.outputs.body }}
+          generate_release_notes: true
+          append_body: true
+          body: |
+            ## Container image tags
+
+            - `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.version }}`
+            - `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}`
+            - `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.major }}`
+            - `${{ steps.image.outputs.name }}:${{ steps.image.outputs.version }}`
+            - `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}`
+            - `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}`
+            - `${{ steps.image.outputs.name }}:latest`
+
+            ## Digest
+
+            `${{ steps.build.outputs.digest }}`
