@@ -95,6 +95,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -119,6 +120,11 @@ jobs:
             - `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}`
             - `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}`
             - `${{ steps.image.outputs.name }}:latest`
+
+            ## Multi-arch
+
+            - `linux/amd64`
+            - `linux/arm64`
 
             ## Digest
 
