@@ -19,24 +19,24 @@ type InspectorTab = "overview" | "yaml" | "events";
 type GraphDepth = "1" | "2";
 
 const edgeMeta: Record<string, { color: string; label: string }> = {
-  owns: { color: "#3b82f6", label: "Owns" },
-  selects: { color: "#4ade80", label: "Selects" },
-  exposes: { color: "#9b5de5", label: "Exposes" },
-  scales: { color: "#f97316", label: "Scales" },
-  references: { color: "#fbbf24", label: "References" },
-  "ingress-routes-to": { color: "#d946ef", label: "Ingress routes to" }
+  owns: { color: "#0f766e", label: "Owns" },
+  selects: { color: "#2f855a", label: "Selects" },
+  exposes: { color: "#b45309", label: "Exposes" },
+  scales: { color: "#c2410c", label: "Scales" },
+  references: { color: "#ca8a04", label: "References" },
+  "ingress-routes-to": { color: "#be185d", label: "Ingress routes to" }
 };
 
 const kindMeta: Record<string, { tint: string; accent: string; icon: string }> = {
-  Deployment: { tint: "rgba(37, 99, 235, 0.18)", accent: "#3b82f6", icon: "DP" },
-  ReplicaSet: { tint: "rgba(59, 130, 246, 0.16)", accent: "#60a5fa", icon: "RS" },
-  Pod: { tint: "rgba(34, 197, 94, 0.18)", accent: "#4ade80", icon: "PO" },
-  Service: { tint: "rgba(139, 92, 246, 0.18)", accent: "#a78bfa", icon: "SV" },
-  Ingress: { tint: "rgba(217, 70, 239, 0.18)", accent: "#e879f9", icon: "IG" },
-  ConfigMap: { tint: "rgba(250, 204, 21, 0.18)", accent: "#fbbf24", icon: "CM" },
-  Secret: { tint: "rgba(100, 116, 139, 0.18)", accent: "#94a3b8", icon: "SC" },
-  HorizontalPodAutoscaler: { tint: "rgba(249, 115, 22, 0.18)", accent: "#fb923c", icon: "HP" },
-  Namespace: { tint: "rgba(34, 197, 94, 0.12)", accent: "#22c55e", icon: "NS" }
+  Deployment: { tint: "rgba(15, 118, 110, 0.14)", accent: "#0f766e", icon: "DP" },
+  ReplicaSet: { tint: "rgba(100, 116, 139, 0.14)", accent: "#64748b", icon: "RS" },
+  Pod: { tint: "rgba(34, 197, 94, 0.14)", accent: "#15803d", icon: "PO" },
+  Service: { tint: "rgba(249, 115, 22, 0.14)", accent: "#c2410c", icon: "SV" },
+  Ingress: { tint: "rgba(190, 24, 93, 0.12)", accent: "#be185d", icon: "IG" },
+  ConfigMap: { tint: "rgba(202, 138, 4, 0.14)", accent: "#a16207", icon: "CM" },
+  Secret: { tint: "rgba(124, 58, 237, 0.10)", accent: "#7c3aed", icon: "SC" },
+  HorizontalPodAutoscaler: { tint: "rgba(220, 38, 38, 0.12)", accent: "#dc2626", icon: "HP" },
+  Namespace: { tint: "rgba(71, 85, 105, 0.12)", accent: "#475569", icon: "NS" }
 };
 
 function countIssues(node: ResourceNode) {
@@ -122,6 +122,10 @@ function zoneForRelation(edgeType: string, direction: "incoming" | "outgoing"): 
 
 function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], selectedId: string | null) {
   const kindOrder = ["Namespace", "Ingress", "Service", "Deployment", "HorizontalPodAutoscaler", "ReplicaSet", "Pod", "ConfigMap", "Secret"];
+  const cardWidth = 196;
+  const columnGap = 320;
+  const rowGap = 184;
+  const horizontalLaneGap = 260;
 
   const adjacency = new Map<string, Set<string>>();
   const nodeById = new Map(nodes.map((node) => [node.id, node]));
@@ -194,18 +198,18 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
       buckets.get(bucketKey)!.push(node);
     }
 
-    const bucketPlacements: Record<string, { x: number; y: number; vertical?: boolean }> = {
+    const bucketPlacements: Record<string, { x: number; y: number; vertical?: boolean; spacing?: number }> = {
       "focus:0": { x: 0, y: 0 },
-      "traffic:1": { x: 120, y: -220, vertical: false },
-      "traffic:2": { x: 360, y: -260, vertical: false },
-      "controllers:1": { x: -260, y: -30, vertical: true },
-      "controllers:2": { x: -520, y: -30, vertical: true },
-      "dependents:1": { x: 280, y: 40, vertical: true },
-      "dependents:2": { x: 540, y: 40, vertical: true },
-      "config:1": { x: 150, y: 220, vertical: false },
-      "config:2": { x: 400, y: 250, vertical: false },
-      "secondary:1": { x: -40, y: 220, vertical: false },
-      "secondary:2": { x: -300, y: 250, vertical: false }
+      "traffic:1": { x: 0, y: -250, vertical: false, spacing: horizontalLaneGap },
+      "traffic:2": { x: columnGap, y: -300, vertical: false, spacing: horizontalLaneGap },
+      "controllers:1": { x: -columnGap, y: 0, vertical: true, spacing: rowGap },
+      "controllers:2": { x: -(columnGap * 2), y: 0, vertical: true, spacing: rowGap },
+      "dependents:1": { x: columnGap, y: 0, vertical: true, spacing: rowGap },
+      "dependents:2": { x: columnGap * 2, y: 0, vertical: true, spacing: rowGap },
+      "config:1": { x: 0, y: 248, vertical: false, spacing: horizontalLaneGap },
+      "config:2": { x: columnGap, y: 320, vertical: false, spacing: horizontalLaneGap },
+      "secondary:1": { x: -columnGap, y: 248, vertical: false, spacing: horizontalLaneGap },
+      "secondary:2": { x: -(columnGap * 2), y: 320, vertical: false, spacing: horizontalLaneGap }
     };
 
     for (const [bucketKey, items] of buckets) {
@@ -217,10 +221,11 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
         }
         return left.name.localeCompare(right.name);
       });
-      const totalSpan = Math.max((sortedItems.length - 1) * 120, 0);
+      const spacing = placement.spacing ?? (placement.vertical ? rowGap : horizontalLaneGap);
+      const totalSpan = Math.max((sortedItems.length - 1) * spacing, 0);
 
       sortedItems.forEach((item, index) => {
-        const offset = index * 120 - totalSpan / 2;
+        const offset = index * spacing - totalSpan / 2;
         const meta = kindMeta[item.kind] ?? kindMeta.Namespace;
         const isSelected = item.id === selectedId;
         const distance = distanceById.get(item.id) ?? 0;
@@ -241,21 +246,21 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
             y: placement.vertical ? placement.y + offset : placement.y
           },
           style: {
-            width: 220,
-            borderRadius: 18,
+            width: cardWidth,
+            borderRadius: 20,
             border: `1px solid ${isSelected ? meta.accent : "rgba(148, 163, 184, 0.18)"}`,
-            background: `linear-gradient(180deg, ${meta.tint}, rgba(9, 14, 24, 0.96))`,
-            color: "#eff6ff",
+            background: `linear-gradient(180deg, ${meta.tint}, rgba(255, 252, 246, 0.98))`,
+            color: "#1f2937",
             boxShadow: isSelected
-              ? `0 0 0 1px ${meta.accent} inset, 0 18px 40px rgba(2, 6, 23, 0.45)`
-              : "0 18px 40px rgba(2, 6, 23, 0.35)",
+              ? `0 0 0 1px ${meta.accent} inset, 0 18px 30px rgba(15, 23, 42, 0.12)`
+              : "0 10px 22px rgba(15, 23, 42, 0.08)",
             padding: 0
           }
         });
       });
     }
   } else {
-    const sorted = sortNodes(nodes);
+    const sorted = sortNodes(nodes).slice(0, 18);
     sorted.forEach((item, index) => {
       const meta = kindMeta[item.kind] ?? kindMeta.Namespace;
       flowNodes.push({
@@ -272,12 +277,12 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
         },
         position: { x: Math.floor(index / 6) * 260, y: (index % 6) * 120 },
         style: {
-          width: 220,
-          borderRadius: 18,
+          width: 196,
+          borderRadius: 20,
           border: "1px solid rgba(148, 163, 184, 0.18)",
-          background: `linear-gradient(180deg, ${meta.tint}, rgba(9, 14, 24, 0.96))`,
-          color: "#eff6ff",
-          boxShadow: "0 18px 40px rgba(2, 6, 23, 0.35)",
+          background: `linear-gradient(180deg, ${meta.tint}, rgba(255, 252, 246, 0.98))`,
+          color: "#1f2937",
+          boxShadow: "0 10px 22px rgba(15, 23, 42, 0.08)",
           padding: 0
         }
       });
@@ -285,26 +290,53 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
   }
 
   const visibleIds = new Set(nodes.map((node) => node.id));
+  const positionedNodes = new Map(flowNodes.map((node) => [node.id, node]));
   const flowEdges: Edge[] = edges
     .filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target))
-    .map((edge) => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      label: "",
-      type: "smoothstep",
-      animated: false,
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: edgeMeta[edge.type]?.color ?? "#94a3b8"
-      },
-      style: {
-        stroke: edgeMeta[edge.type]?.color ?? "#94a3b8",
-        strokeWidth: edge.type === "owns" ? 3.6 : 2.4,
-        strokeDasharray: edge.type === "references" ? "6 6" : undefined,
-        opacity: 0.92
-      }
-    }));
+    .map((edge) => {
+      const sourceNode = positionedNodes.get(edge.source);
+      const targetNode = positionedNodes.get(edge.target);
+      const dx = (targetNode?.position.x ?? 0) - (sourceNode?.position.x ?? 0);
+      const dy = (targetNode?.position.y ?? 0) - (sourceNode?.position.y ?? 0);
+
+      const sourceHandle =
+        Math.abs(dx) >= Math.abs(dy)
+          ? dx >= 0
+            ? "source-right"
+            : "source-left"
+          : dy >= 0
+            ? "source-bottom"
+            : "source-top";
+      const targetHandle =
+        Math.abs(dx) >= Math.abs(dy)
+          ? dx >= 0
+            ? "target-left"
+            : "target-right"
+          : dy >= 0
+            ? "target-top"
+            : "target-bottom";
+
+      return {
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle,
+        targetHandle,
+        label: "",
+        type: "smoothstep",
+        animated: false,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: edgeMeta[edge.type]?.color ?? "#94a3b8"
+        },
+        style: {
+          stroke: edgeMeta[edge.type]?.color ?? "#94a3b8",
+          strokeWidth: edge.type === "owns" ? 3.2 : 2.2,
+          strokeDasharray: edge.type === "references" ? "6 6" : undefined,
+          opacity: 0.9
+        }
+      };
+    });
 
   return { nodes: flowNodes, edges: flowEdges };
 }
@@ -312,17 +344,28 @@ function buildFlowLayout(nodes: ResourceNode[], edges: GraphResponse["edges"], s
 function ResourceFlowNode({ data }: { data: Record<string, string | number> }) {
   return (
     <div className="flow-card">
-      <Handle type="target" position={Position.Left} className="flow-handle" />
-      <div className="flow-card__icon" style={{ backgroundColor: String(data.tint), color: String(data.accent) }}>
-        {data.icon}
+      <Handle id="target-left" type="target" position={Position.Left} className="flow-handle" />
+      <Handle id="target-top" type="target" position={Position.Top} className="flow-handle" />
+      <Handle id="target-right" type="target" position={Position.Right} className="flow-handle" />
+      <Handle id="target-bottom" type="target" position={Position.Bottom} className="flow-handle" />
+      <div className="flow-card__header">
+        <div className="flow-card__icon" style={{ backgroundColor: String(data.tint), color: String(data.accent) }}>
+          {data.icon}
+        </div>
+        {Number(data.issues) > 0 ? <div className="flow-card__badge">{Number(data.issues)}</div> : null}
       </div>
       <div className="flow-card__body">
         <strong>{String(data.name)}</strong>
         <span>{String(data.kind)}</span>
+      </div>
+      <div className="flow-card__meta">
+        <small>{String(data.namespace)}</small>
         <small>{String(data.depth)}</small>
       </div>
-      {Number(data.issues) > 0 ? <div className="flow-card__badge">{Number(data.issues)}</div> : null}
-      <Handle type="source" position={Position.Right} className="flow-handle" />
+      <Handle id="source-left" type="source" position={Position.Left} className="flow-handle" />
+      <Handle id="source-top" type="source" position={Position.Top} className="flow-handle" />
+      <Handle id="source-right" type="source" position={Position.Right} className="flow-handle" />
+      <Handle id="source-bottom" type="source" position={Position.Bottom} className="flow-handle" />
     </div>
   );
 }
@@ -376,7 +419,7 @@ export function App() {
   const [graphDepth, setGraphDepth] = useState<GraphDepth>("2");
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
-  const [insightsCollapsed, setInsightsCollapsed] = useState(false);
+  const [insightsCollapsed, setInsightsCollapsed] = useState(true);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 1510px)");
@@ -528,6 +571,7 @@ export function App() {
   const selected = resourcesPayload?.resources.find((node) => node.id === selectedId) ?? null;
 
   const graphNodes = graph?.nodes ?? [];
+  const expandedLegend = graphNodes.length <= 16;
 
   const filteredEdges = useMemo(() => {
     if (!graph) {
@@ -578,9 +622,10 @@ export function App() {
             <span />
             <span />
           </div>
-          <div>
+          <div className="hero-copy">
+            <div className="brand-eyebrow">Cluster topology explorer</div>
             <div className="brand-title">Kausal</div>
-            <p>Visualize why your Kubernetes resources look the way they do.</p>
+            <p>Trace ownership, traffic and config dependencies across your Kubernetes resources.</p>
           </div>
         </div>
         <div className="hero-actions">
@@ -763,22 +808,33 @@ export function App() {
                     ) : null}
                   </div>
                 </div>
+                <div className="graph-toolbar__headline">
+                  <div>
+                    <span className="graph-toolbar__eyebrow">Focused topology</span>
+                    <h2>{selected ? selected.name : "Cluster graph"}</h2>
+                  </div>
+                  <p>
+                    {selected
+                      ? `${selected.kind} in ${selected.namespace ?? "cluster-wide"}`
+                      : "Inspect relationships between Kubernetes resources."}
+                  </p>
+                </div>
                 <div className="graph-summary">
-                  <span>{graphNodes.length} nodes in focus</span>
+                  <span>{graphNodes.length} nodes</span>
                   <span>{filteredEdges.length} edges</span>
                   {loadingGraph ? <span>Updating graph...</span> : null}
+                  {!expandedLegend ? <span>Dense view simplified</span> : null}
                 </div>
-                <div className="edge-legend">
-                  {Object.entries(edgeMeta).map(([key, value]) => (
-                    <div key={key} className="edge-legend__item">
-                      <span style={{ backgroundColor: value.color }} />
-                      {value.label}
-                    </div>
-                  ))}
-                </div>
-                <p className="graph-hint">
-                  Fokus in der Mitte. Traffic oben, Controller links, abhängige Ressourcen rechts, Konfiguration unten.
-                </p>
+                {expandedLegend ? (
+                  <div className="edge-legend">
+                    {Object.entries(edgeMeta).map(([key, value]) => (
+                      <div key={key} className="edge-legend__item">
+                        <span style={{ backgroundColor: value.color }} />
+                        {value.label}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               {visibleNodes.length === 0 ? (
