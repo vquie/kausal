@@ -707,7 +707,7 @@ export function App() {
           id: node.id,
           title: `${node.kind} ${node.name}`,
           detail: node.insights[0].replace(/^([A-Z][^.]+)\.?$/, "$1"),
-          severity: countIssues(node) >= 2 ? "high" : "medium"
+          count: countIssues(node)
         })),
     [namespaceScopedNodes]
   );
@@ -1008,15 +1008,22 @@ export function App() {
 
               {!insightsCollapsed ? (
                 <div className="issue-strip">
+                  <div className="issue-strip__intro">
+                    <strong>Priority findings</strong>
+                    <p>Resources with active insights. Cards with more findings should be reviewed first.</p>
+                  </div>
                   {issueCards.length > 0 ? (
                     issueCards.map((card) => (
                       <button
                         key={card.id}
                         type="button"
-                        className={`issue-card issue-card--${card.severity}`}
+                        className={`issue-card ${card.count >= 2 ? "issue-card--high" : "issue-card--medium"}`}
                         onClick={() => setSelectedId(card.id)}
                       >
-                        <div className="issue-card__title">{card.title}</div>
+                        <div className="issue-card__header">
+                          <div className="issue-card__title">{card.title}</div>
+                          <span className="issue-card__count">{card.count} findings</span>
+                        </div>
                         <p>{card.detail}</p>
                       </button>
                     ))
