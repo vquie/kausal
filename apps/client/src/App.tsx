@@ -628,14 +628,6 @@ export function App() {
             <p>Trace ownership, traffic and config dependencies across your Kubernetes resources.</p>
           </div>
         </div>
-        <div className="hero-actions">
-          <button type="button" className="icon-button" aria-label="Help">
-            ?
-          </button>
-          <button type="button" className="icon-button" aria-label="Theme">
-            *
-          </button>
-        </div>
       </header>
 
       {error ? (
