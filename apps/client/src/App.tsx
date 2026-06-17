@@ -638,44 +638,6 @@ export function App() {
         </main>
       ) : resourcesPayload ? (
         <>
-          <section className="metric-row">
-            <label className="metric-card metric-card--select">
-              <span>Namespace</span>
-              <select value={namespaceFilter} onChange={(event) => setNamespaceFilter(event.target.value)}>
-                {namespaces.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="metric-card metric-card--select">
-              <span>Highlight</span>
-              <select value={highlightMode} onChange={(event) => setHighlightMode(event.target.value as HighlightMode)}>
-                <option value="all">All resources</option>
-                <option value="issues">All issues</option>
-                <option value="managers">Multi-manager</option>
-                <option value="references">References</option>
-              </select>
-            </label>
-            <div className="metric-card">
-              <span>Resources</span>
-              <strong>{metrics.resources}</strong>
-            </div>
-            <div className="metric-card metric-card--alert">
-              <span>Issues</span>
-              <strong>{metrics.issues}</strong>
-            </div>
-            <div className="metric-card">
-              <span>Managers</span>
-              <strong>{metrics.managers}</strong>
-            </div>
-            <div className="metric-card">
-              <span>Last sync</span>
-              <strong>{formatRelativeTime((graph ?? resourcesPayload).generatedAt)}</strong>
-            </div>
-          </section>
-
           <main
             className={`dashboard-grid ${
               leftCollapsed && rightCollapsed
@@ -696,14 +658,6 @@ export function App() {
                     {visibleNodes.length} shown{visibleNodes.length !== metrics.resources ? ` of ${metrics.resources}` : ""}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  className="panel-toggle"
-                  onClick={() => setLeftCollapsed((value) => !value)}
-                  aria-label="Collapse resources panel"
-                >
-                  <span aria-hidden="true">{"<"}</span>
-                </button>
               </div>
               <div className="search-shell">
                 <input
@@ -742,22 +696,59 @@ export function App() {
 
             <section className="panel graph-panel">
               <div className="graph-toolbar">
+                <section className="metric-row graph-toolbar__metrics">
+                  <label className="metric-card metric-card--select">
+                    <span>Namespace</span>
+                    <select value={namespaceFilter} onChange={(event) => setNamespaceFilter(event.target.value)}>
+                      {namespaces.map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="metric-card metric-card--select">
+                    <span>Highlight</span>
+                    <select value={highlightMode} onChange={(event) => setHighlightMode(event.target.value as HighlightMode)}>
+                      <option value="all">All resources</option>
+                      <option value="issues">All issues</option>
+                      <option value="managers">Multi-manager</option>
+                      <option value="references">References</option>
+                    </select>
+                  </label>
+                  <div className="metric-card">
+                    <span>Resources</span>
+                    <strong>{metrics.resources}</strong>
+                  </div>
+                  <div className="metric-card metric-card--alert">
+                    <span>Issues</span>
+                    <strong>{metrics.issues}</strong>
+                  </div>
+                  <div className="metric-card">
+                    <span>Managers</span>
+                    <strong>{metrics.managers}</strong>
+                  </div>
+                  <div className="metric-card">
+                    <span>Last sync</span>
+                    <strong>{formatRelativeTime((graph ?? resourcesPayload).generatedAt)}</strong>
+                  </div>
+                </section>
                 <div className="graph-toolbar__top">
+                  <div className="graph-toolbar__slot graph-toolbar__slot--left">
+                    <button
+                      type="button"
+                      className="panel-peek panel-peek--left"
+                      onClick={() => setLeftCollapsed((value) => !value)}
+                      aria-label={leftCollapsed ? "Expand resources panel" : "Collapse resources panel"}
+                    >
+                      <strong aria-hidden="true">{leftCollapsed ? ">" : "<"}</strong>
+                      <span className="panel-peek__copy">
+                        <b>Resources</b>
+                        <small>{leftCollapsed ? "Show panel" : "Hide panel"}</small>
+                      </span>
+                    </button>
+                  </div>
                   <div className="graph-toolbar__cluster">
-                    {leftCollapsed ? (
-                      <button
-                        type="button"
-                        className="panel-peek panel-peek--left"
-                        onClick={() => setLeftCollapsed(false)}
-                        aria-label="Expand resources panel"
-                      >
-                        <strong aria-hidden="true">{">"}</strong>
-                        <span className="panel-peek__copy">
-                          <b>Resources</b>
-                          <small>Show panel</small>
-                        </span>
-                      </button>
-                    ) : null}
                     <div className="view-switch">
                       <button
                         type="button"
@@ -787,23 +778,23 @@ export function App() {
                       type="button"
                       className="toolbar-chip"
                       onClick={() => setInsightsCollapsed((value) => !value)}
-                    >
-                      {insightsCollapsed ? "Show insights" : "Hide insights"}
-                    </button>
-                    {rightCollapsed && selected ? (
-                      <button
-                        type="button"
-                        className="panel-peek panel-peek--right"
-                        onClick={() => setRightCollapsed(false)}
-                        aria-label="Expand detail panel"
                       >
-                        <span className="panel-peek__copy">
-                          <b>Details</b>
-                          <small>{selected.kind}</small>
-                        </span>
-                        <strong aria-hidden="true">{"<"}</strong>
+                        {insightsCollapsed ? "Show insights" : "Hide insights"}
                       </button>
-                    ) : null}
+                  </div>
+                  <div className="graph-toolbar__slot graph-toolbar__slot--right">
+                    <button
+                      type="button"
+                      className="panel-peek panel-peek--right"
+                      onClick={() => setRightCollapsed((value) => !value)}
+                      aria-label={rightCollapsed ? "Expand detail panel" : "Collapse detail panel"}
+                    >
+                      <span className="panel-peek__copy">
+                        <b>Details</b>
+                        <small>{rightCollapsed ? (selected?.kind ?? "Show panel") : "Hide panel"}</small>
+                      </span>
+                      <strong aria-hidden="true">{rightCollapsed ? "<" : ">"}</strong>
+                    </button>
                   </div>
                 </div>
                 <div className="graph-toolbar__headline">
@@ -937,14 +928,6 @@ export function App() {
                     </span>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="panel-toggle"
-                  onClick={() => setRightCollapsed((value) => !value)}
-                  aria-label="Collapse detail panel"
-                >
-                  <span aria-hidden="true">{">"}</span>
-                </button>
               </div>
               <div className="detail-tabs">
                     <button
