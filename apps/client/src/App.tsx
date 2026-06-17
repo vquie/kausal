@@ -759,8 +759,11 @@ export function App() {
                         onClick={() => setLeftCollapsed(false)}
                         aria-label="Expand resources panel"
                       >
-                        <strong>{metrics.resources}</strong>
-                        <span>Resources</span>
+                        <strong aria-hidden="true">{">"}</strong>
+                        <span className="panel-peek__copy">
+                          <b>Resources</b>
+                          <small>Show panel</small>
+                        </span>
                       </button>
                     ) : null}
                     <div className="view-switch">
@@ -802,8 +805,11 @@ export function App() {
                         onClick={() => setRightCollapsed(false)}
                         aria-label="Expand detail panel"
                       >
-                        <strong>{(kindMeta[selected.kind] ?? kindMeta.Namespace).icon}</strong>
-                        <span>{selected.kind}</span>
+                        <span className="panel-peek__copy">
+                          <b>Details</b>
+                          <small>{selected.kind}</small>
+                        </span>
+                        <strong aria-hidden="true">{"<"}</strong>
                       </button>
                     ) : null}
                   </div>
