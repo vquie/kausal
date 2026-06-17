@@ -25,6 +25,16 @@ type CenterViewMode = "graph" | "list";
 type InspectorTab = "overview" | "yaml" | "events";
 type GraphDepth = "1" | "2";
 type FlowEdgeData = { tooltip: string };
+type FlowNodeData = {
+  name: string;
+  kind: string;
+  namespace: string;
+  accent: string;
+  tint: string;
+  icon: string;
+  issues: number;
+  depth: string;
+};
 
 const metricHelp = {
   namespace: "Limits the explorer to one namespace or shows the whole cluster.",
@@ -443,7 +453,7 @@ function RelationFlowEdge({
   );
 }
 
-function ResourceFlowNode({ data }: { data: Record<string, string | number> }) {
+function ResourceFlowNode({ data }: { data: FlowNodeData }) {
   return (
     <div className="flow-card">
       <Handle id="target-left" type="target" position={Position.Left} className="flow-handle" />
@@ -457,12 +467,12 @@ function ResourceFlowNode({ data }: { data: Record<string, string | number> }) {
         {Number(data.issues) > 0 ? <div className="flow-card__badge">{Number(data.issues)}</div> : null}
       </div>
       <div className="flow-card__body">
-        <strong>{String(data.name)}</strong>
-        <span>{String(data.kind)}</span>
+        <strong>{data.name}</strong>
+        <span>{data.kind}</span>
       </div>
       <div className="flow-card__meta">
-        <small>{String(data.namespace)}</small>
-        <small>{String(data.depth)}</small>
+        <small>{data.namespace}</small>
+        <small>{data.depth}</small>
       </div>
       <Handle id="source-left" type="source" position={Position.Left} className="flow-handle" />
       <Handle id="source-top" type="source" position={Position.Top} className="flow-handle" />
@@ -900,7 +910,7 @@ export function App() {
                       className="toolbar-chip"
                       onClick={() => setInsightsCollapsed((value) => !value)}
                       >
-                        {insightsCollapsed ? "Show insights" : "Hide insights"}
+                        {insightsCollapsed ? "Show highlights" : "Hide highlights"}
                       </button>
                   </div>
                   <div className="graph-toolbar__slot graph-toolbar__slot--right">
@@ -1009,7 +1019,7 @@ export function App() {
               {!insightsCollapsed ? (
                 <div className="issue-strip">
                   <div className="issue-strip__intro">
-                    <strong>Priority findings</strong>
+                    <strong>Highlights</strong>
                     <p>Resources with active insights. Cards with more findings should be reviewed first.</p>
                   </div>
                   {issueCards.length > 0 ? (

@@ -737,6 +737,7 @@ select {
 
 .graph-stage {
   position: relative;
+  display: flex;
   min-height: 0;
   height: 100%;
   padding: 0 0 8px;
@@ -758,8 +759,9 @@ select {
 }
 
 .graph-stage .react-flow {
+  flex: 1 1 auto;
   height: 100%;
-  min-height: clamp(420px, 60vh, 760px);
+  min-height: 0;
   border: 1px solid rgb(226 232 240 / 92%);
   border-radius: 6px;
   background:
