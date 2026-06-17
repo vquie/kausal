@@ -1,5 +1,3 @@
-# Kausal
-
 <p align="left">
   <img src="apps/client/src/assets/logo.png" alt="Kausal logo" width="280">
 </p>
