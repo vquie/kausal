@@ -91,11 +91,20 @@ function collectFieldPaths(node: unknown, path = ""): string[] {
   return results;
 }
 
+function sanitizeManagerName(value: unknown) {
+  const raw = String(value ?? "unknown");
+  const normalized = raw.replace(/orbstack/gi, "local");
+  if (normalized === "deploy@local") {
+    return "deploy";
+  }
+  return normalized;
+}
+
 function summarizeManagedFields(value: Array<Record<string, unknown>> | undefined): ManagedFieldSummary[] {
   return (value ?? []).map((field) => {
     const fields = collectFieldPaths(field.fieldsV1).slice(0, 40);
     return {
-      manager: String(field.manager ?? "unknown"),
+      manager: sanitizeManagerName(field.manager),
       operation: field.operation ? String(field.operation) : undefined,
       time: field.time ? String(field.time) : undefined,
       fields

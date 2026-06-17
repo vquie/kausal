@@ -1,6 +1,6 @@
 # Development Kubernetes manifests
 
-This directory contains development-only Kubernetes manifests for running Kausal in a local cluster such as OrbStack.
+This directory contains development-only Kubernetes manifests for running Kausal in a local Kubernetes cluster.
 
 These files are intentionally not a production baseline:
 

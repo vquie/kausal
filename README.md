@@ -8,7 +8,7 @@ Kausal is published on GitHub under the MIT License.
 
 - `apps/server/`: Express API in TypeScript. It reads supported Kubernetes resources with a read-only ServiceAccount, derives graph edges, summarizes `managedFields`, and exposes the API.
 - `apps/client/`: React app with a three-column layout: resource list, graph canvas, detail panel.
-- `deploy/dev/k8s/`: Development-only Kubernetes manifests for OrbStack or another local cluster.
+- `deploy/dev/k8s/`: Development-only Kubernetes manifests for a local Kubernetes cluster.
 - `Dockerfile`: Multi-stage Node build that serves the built React app from the backend container.
 
 The backend supports:
@@ -41,11 +41,11 @@ The backend supports:
 
 ## Assumptions
 
-- The primary run mode is inside Kubernetes. The app is intended to run in OrbStack Kubernetes and read the cluster through its ServiceAccount.
+- The primary run mode is inside Kubernetes. The app is intended to run in a local Kubernetes cluster and read the cluster through its ServiceAccount.
 - The manifests in `deploy/dev/k8s/` are for development only. They are intentionally local-cluster oriented and not a production deployment baseline.
 - Secret contents and Secret metadata are never returned by the API or rendered in the UI. Secret nodes are inferred from workload references instead of being fetched from the Kubernetes API.
 - The initial graph layout is deterministic and simple. It is meant for comprehension, not for perfect graph aesthetics.
-- Ingress is optional because local Ingress availability depends on the OrbStack setup.
+- Ingress is optional because local Ingress availability depends on the local cluster setup.
 
 ## Local development
 
@@ -110,9 +110,9 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
-## Make the image available to OrbStack Kubernetes
+## Make the image available to the local Kubernetes cluster
 
-OrbStack usually exposes the local Docker image store directly to its Kubernetes cluster. If your local OrbStack setup uses the same image store, no extra import step is needed after `docker build`.
+Some local Kubernetes setups expose the local Docker image store directly to the cluster. If your environment uses the same image store, no extra import step is needed after `docker build`.
 
 If the Pod cannot pull `kausal:dev`, rebuild and confirm the image exists locally:
 
