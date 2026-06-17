@@ -1,5 +1,5 @@
 import { buildGraph, focusGraph } from "./graph.js";
-import { createKubeClients, listSecretMetadata } from "./kube.js";
+import { createKubeClients } from "./kube.js";
 import type { GraphResponse, ResourcesResponse } from "./types.js";
 
 interface SnapshotOptions {
@@ -40,7 +40,6 @@ export class ResourceService {
         services,
         ingresses,
         configMaps,
-        secrets,
         hpas
       ] = await Promise.all([
         this.clients.appsApi.listNamespacedDeployment({ namespace }),
@@ -49,7 +48,6 @@ export class ResourceService {
         this.clients.coreApi.listNamespacedService({ namespace }),
         this.clients.networkingApi.listNamespacedIngress({ namespace }),
         this.clients.coreApi.listNamespacedConfigMap({ namespace }),
-        listSecretMetadata(this.clients.kc, namespace),
         this.clients.autoscalingApi.listNamespacedHorizontalPodAutoscaler({ namespace })
       ]);
 
@@ -61,12 +59,12 @@ export class ResourceService {
         services: this.unwrapItems(services),
         ingresses: this.unwrapItems(ingresses),
         configMaps: this.unwrapItems(configMaps),
-        secrets,
+        secrets: [],
         hpas: this.unwrapItems(hpas)
       };
     }
 
-    const [namespaces, deployments, replicaSets, pods, services, ingresses, configMaps, secrets, hpas] =
+    const [namespaces, deployments, replicaSets, pods, services, ingresses, configMaps, hpas] =
       await Promise.all([
         this.clients.coreApi.listNamespace(),
         this.clients.appsApi.listDeploymentForAllNamespaces(),
@@ -75,7 +73,6 @@ export class ResourceService {
         this.clients.coreApi.listServiceForAllNamespaces(),
         this.clients.networkingApi.listIngressForAllNamespaces(),
         this.clients.coreApi.listConfigMapForAllNamespaces(),
-        listSecretMetadata(this.clients.kc),
         this.clients.autoscalingApi.listHorizontalPodAutoscalerForAllNamespaces()
       ]);
 
@@ -87,7 +84,7 @@ export class ResourceService {
       services: this.unwrapItems(services),
       ingresses: this.unwrapItems(ingresses),
       configMaps: this.unwrapItems(configMaps),
-      secrets,
+      secrets: [],
       hpas: this.unwrapItems(hpas)
     };
   }

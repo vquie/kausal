@@ -10,7 +10,6 @@ import type {
   V2HorizontalPodAutoscaler
 } from "@kubernetes/client-node";
 import type { GraphEdge, GraphResponse, ManagedFieldSummary, ResourceNode } from "./types.js";
-import type { SecretMetadataItem } from "./kube.js";
 
 type AnyKubeResource =
   | V1Namespace
@@ -20,8 +19,7 @@ type AnyKubeResource =
   | V1Service
   | V1Ingress
   | V1ConfigMap
-  | V2HorizontalPodAutoscaler
-  | SecretMetadataItem;
+  | V2HorizontalPodAutoscaler;
 
 interface BuildInput {
   namespaces: V1Namespace[];
@@ -31,7 +29,7 @@ interface BuildInput {
   services: V1Service[];
   ingresses: V1Ingress[];
   configMaps: V1ConfigMap[];
-  secrets: SecretMetadataItem[];
+  secrets: ResourceNode[];
   hpas: V2HorizontalPodAutoscaler[];
 }
 
@@ -169,6 +167,41 @@ function podTemplateRefs(resource: V1Deployment | V1ReplicaSet | V1Pod): Array<{
   return [...refs.values()];
 }
 
+function syntheticSecretNodes(input: Omit<BuildInput, "secrets">): ResourceNode[] {
+  const refs = new Map<string, ResourceNode>();
+  const workloads = [...input.deployments, ...input.replicaSets, ...input.pods];
+
+  for (const workload of workloads) {
+    const namespace = workload.metadata?.namespace ?? null;
+    for (const ref of podTemplateRefs(workload)) {
+      if (ref.kind !== "Secret") {
+        continue;
+      }
+
+      const id = toResourceId("Secret", namespace, ref.name);
+      if (refs.has(id)) {
+        continue;
+      }
+
+      refs.set(id, {
+        id,
+        kind: "Secret",
+        apiVersion: "v1",
+        name: ref.name,
+        namespace,
+        labels: {},
+        annotations: {},
+        ownerReferences: [],
+        managers: [],
+        relations: [],
+        insights: ["Secret metadata is not fetched in the dev deployment; this node is inferred from workload references."]
+      });
+    }
+  }
+
+  return [...refs.values()];
+}
+
 function toNode(resource: AnyKubeResource, kind: ResourceNode["kind"], namespaceOverride?: string | null): ResourceNode {
   const metadata = (resource.metadata ?? {}) as {
     namespace?: string;
@@ -217,6 +250,7 @@ function addRelation(nodeMap: Map<string, ResourceNode>, source: string, type: G
 }
 
 export function buildGraph(input: BuildInput): GraphResponse {
+  const secrets = input.secrets.length > 0 ? input.secrets : syntheticSecretNodes(input);
   const nodes: ResourceNode[] = [
     ...input.namespaces.map((item) => toNode(item, "Namespace", null)),
     ...input.deployments.map((item) => toNode(item, "Deployment")),
@@ -225,7 +259,7 @@ export function buildGraph(input: BuildInput): GraphResponse {
     ...input.services.map((item) => toNode(item, "Service")),
     ...input.ingresses.map((item) => toNode(item, "Ingress")),
     ...input.configMaps.map((item) => toNode(item, "ConfigMap")),
-    ...input.secrets.map((item) => toNode(item, "Secret")),
+    ...secrets,
     ...input.hpas.map((item) => toNode(item, "HorizontalPodAutoscaler"))
   ];
 
