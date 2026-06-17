@@ -100,6 +100,10 @@ function sanitizeManagerName(value: unknown) {
   return normalized;
 }
 
+function uniqueManagerNames(managers: ManagedFieldSummary[]) {
+  return [...new Set(managers.map((item) => item.manager))];
+}
+
 function summarizeManagedFields(value: Array<Record<string, unknown>> | undefined): ManagedFieldSummary[] {
   return (value ?? []).map((field) => {
     const fields = collectFieldPaths(field.fieldsV1).slice(0, 40);
@@ -286,6 +290,8 @@ export function buildGraph(input: BuildInput): GraphResponse {
   }
 
   for (const node of nodes) {
+    const managerNames = uniqueManagerNames(node.managers);
+
     if (node.ownerReferences.length > 0) {
       for (const owner of node.ownerReferences) {
         if (!owner.kind || !owner.name) {
@@ -296,10 +302,10 @@ export function buildGraph(input: BuildInput): GraphResponse {
       }
     }
 
-    if (node.managers.length > 1) {
-      node.insights.push(`Multiple managers observed: ${node.managers.map((item) => item.manager).join(", ")}`);
+    if (managerNames.length > 1) {
+      node.insights.push(`Multiple managers observed: ${managerNames.join(", ")}`);
     }
-    if (node.managers.length >= 4) {
+    if (managerNames.length >= 4) {
       node.insights.push("Many different field managers touched this resource.");
     }
   }

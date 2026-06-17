@@ -86,6 +86,10 @@ function countIssues(node: ResourceNode) {
   return node.insights.length;
 }
 
+function uniqueManagerNames(node: ResourceNode) {
+  return [...new Set(node.managers.map((manager) => manager.manager))];
+}
+
 function summarizeAnnotations(annotations: Record<string, string>) {
   return Object.entries(annotations).slice(0, 6);
 }
@@ -123,7 +127,7 @@ function resourceMatchesHighlight(node: ResourceNode, mode: HighlightMode) {
     return countIssues(node) > 0;
   }
   if (mode === "managers") {
-    return node.managers.length > 1;
+    return uniqueManagerNames(node).length > 1;
   }
   if (mode === "references") {
     return node.relations.some((relation) => relation.type === "references");
@@ -1099,7 +1103,7 @@ export function App() {
                           </div>
                           <div>
                             <dt>Managers</dt>
-                            <dd>{selected.managers.length}</dd>
+                            <dd>{uniqueManagerNames(selected).length}</dd>
                           </div>
                         </dl>
                       </section>
