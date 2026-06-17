@@ -6,7 +6,7 @@ Kausal is a local-first Kubernetes visualization MVP that explains why resources
 
 - `server/`: Express API in TypeScript. It reads supported Kubernetes resources with a read-only ServiceAccount, derives graph edges, summarizes `managedFields`, and exposes the MVP API.
 - `client/`: React app with a three-column layout: resource list, graph canvas, detail panel.
-- `k8s/`: Plain Kubernetes manifests for OrbStack or another local cluster.
+- `k8s/`: Development-only Kubernetes manifests for OrbStack or another local cluster.
 - `Dockerfile`: Multi-stage Node build that serves the built React app from the backend container.
 
 The backend supports:
@@ -25,7 +25,7 @@ The backend supports:
 - Service
 - Ingress
 - ConfigMap
-- Secret metadata only
+- Secret references inferred from workloads
 - HorizontalPodAutoscaler
 
 ## Derived relationships
@@ -40,7 +40,8 @@ The backend supports:
 ## Assumptions
 
 - The primary run mode is inside Kubernetes. The app is intended to run in OrbStack Kubernetes and read the cluster through its ServiceAccount.
-- Secret contents are never returned by the API or rendered in the UI. The backend fetches Secret metadata via the Kubernetes metadata-only representation.
+- The manifests in `k8s/` are for development only. They are intentionally local-cluster oriented and not a production deployment baseline.
+- Secret contents and Secret metadata are never returned by the API or rendered in the UI. Secret nodes are inferred from workload references instead of being fetched from the Kubernetes API.
 - The initial graph layout is deterministic and simple. It is meant for comprehension, not for perfect graph aesthetics.
 - Ingress is optional because local Ingress availability depends on the OrbStack setup.
 
@@ -128,6 +129,7 @@ kubectl apply -f k8s/clusterrole.yaml
 kubectl apply -f k8s/clusterrolebinding.yaml
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/networkpolicy.yaml
 ```
 
 Optional Ingress:
@@ -177,7 +179,6 @@ Check RBAC:
 ```bash
 kubectl auth can-i list pods --as=system:serviceaccount:kausal:kausal --all-namespaces
 kubectl auth can-i list deployments.apps --as=system:serviceaccount:kausal:kausal --all-namespaces
-kubectl auth can-i list secrets --as=system:serviceaccount:kausal:kausal --all-namespaces
 kubectl auth can-i list ingresses.networking.k8s.io --as=system:serviceaccount:kausal:kausal --all-namespaces
 kubectl auth can-i list horizontalpodautoscalers.autoscaling --as=system:serviceaccount:kausal:kausal --all-namespaces
 ```
