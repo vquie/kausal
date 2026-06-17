@@ -12,17 +12,17 @@ These files are intentionally not a production baseline:
 Apply the development manifests in this order:
 
 ```bash
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/serviceaccount.yaml
-kubectl apply -f k8s/clusterrole.yaml
-kubectl apply -f k8s/clusterrolebinding.yaml
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/networkpolicy.yaml
+kubectl apply -f deploy/dev/k8s/namespace.yaml
+kubectl apply -f deploy/dev/k8s/serviceaccount.yaml
+kubectl apply -f deploy/dev/k8s/clusterrole.yaml
+kubectl apply -f deploy/dev/k8s/clusterrolebinding.yaml
+kubectl apply -f deploy/dev/k8s/deployment.yaml
+kubectl apply -f deploy/dev/k8s/service.yaml
+kubectl apply -f deploy/dev/k8s/networkpolicy.yaml
 ```
 
 Optional ingress:
 
 ```bash
-kubectl apply -f k8s/ingress.yaml
+kubectl apply -f deploy/dev/k8s/ingress.yaml
 ```

@@ -74,7 +74,7 @@ jobs:
             type=raw,value=latest
           labels: |
             org.opencontainers.image.title=Kausal
-            org.opencontainers.image.description=Local-first Kubernetes visualization MVP
+            org.opencontainers.image.description=Local-first Kubernetes visualization for understanding cluster relationships
             org.opencontainers.image.url=https://github.com/${{ github.repository }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.documentation=https://github.com/${{ github.repository }}#readme
@@ -82,7 +82,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           annotations: |
             org.opencontainers.image.title=Kausal
-            org.opencontainers.image.description=Local-first Kubernetes visualization MVP
+            org.opencontainers.image.description=Local-first Kubernetes visualization for understanding cluster relationships
             org.opencontainers.image.url=https://github.com/${{ github.repository }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.documentation=https://github.com/${{ github.repository }}#readme

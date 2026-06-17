@@ -3,12 +3,12 @@
   "private": true,
   "version": "0.1.0",
   "workspaces": [
-    "server",
-    "client"
+    "apps/server",
+    "apps/client"
   ],
   "scripts": {
-    "build": "npm run build -w server && npm run build -w client",
-    "dev:server": "npm run dev -w server",
-    "dev:client": "npm run dev -w client"
+    "build": "npm run build -w apps/server && npm run build -w apps/client",
+    "dev:server": "npm run dev -w apps/server",
+    "dev:client": "npm run dev -w apps/client"
   }
 }

@@ -25,15 +25,16 @@ docker-build:
 	docker build -t $(IMAGE) .
 
 k8s-apply:
-	$(KUBECTL) apply -f k8s/namespace.yaml
-	$(KUBECTL) apply -f k8s/serviceaccount.yaml
-	$(KUBECTL) apply -f k8s/clusterrole.yaml
-	$(KUBECTL) apply -f k8s/clusterrolebinding.yaml
-	$(KUBECTL) apply -f k8s/deployment.yaml
-	$(KUBECTL) apply -f k8s/service.yaml
+	$(KUBECTL) apply -f deploy/dev/k8s/namespace.yaml
+	$(KUBECTL) apply -f deploy/dev/k8s/serviceaccount.yaml
+	$(KUBECTL) apply -f deploy/dev/k8s/clusterrole.yaml
+	$(KUBECTL) apply -f deploy/dev/k8s/clusterrolebinding.yaml
+	$(KUBECTL) apply -f deploy/dev/k8s/deployment.yaml
+	$(KUBECTL) apply -f deploy/dev/k8s/service.yaml
+	$(KUBECTL) apply -f deploy/dev/k8s/networkpolicy.yaml
 
 k8s-apply-ingress:
-	$(KUBECTL) apply -f k8s/ingress.yaml
+	$(KUBECTL) apply -f deploy/dev/k8s/ingress.yaml
 
 k8s-rollout:
 	$(KUBECTL) -n $(NAMESPACE) rollout status deployment/$(APP)

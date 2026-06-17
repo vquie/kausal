@@ -1,12 +1,14 @@
-# Kausal MVP
+# Kausal
 
-Kausal is a local-first Kubernetes visualization MVP that explains why resources look the way they do by combining ownership, selector, exposure, ingress, scaling, reference, and `managedFields` data into a single graph.
+Kausal is a local-first Kubernetes visualization tool that explains why resources look the way they do by combining ownership, selector, exposure, ingress, scaling, reference, and `managedFields` data into a single graph.
+
+Kausal is published on GitHub under the MIT License.
 
 ## Architecture
 
-- `server/`: Express API in TypeScript. It reads supported Kubernetes resources with a read-only ServiceAccount, derives graph edges, summarizes `managedFields`, and exposes the MVP API.
-- `client/`: React app with a three-column layout: resource list, graph canvas, detail panel.
-- `k8s/`: Development-only Kubernetes manifests for OrbStack or another local cluster.
+- `apps/server/`: Express API in TypeScript. It reads supported Kubernetes resources with a read-only ServiceAccount, derives graph edges, summarizes `managedFields`, and exposes the API.
+- `apps/client/`: React app with a three-column layout: resource list, graph canvas, detail panel.
+- `deploy/dev/k8s/`: Development-only Kubernetes manifests for OrbStack or another local cluster.
 - `Dockerfile`: Multi-stage Node build that serves the built React app from the backend container.
 
 The backend supports:
@@ -40,7 +42,7 @@ The backend supports:
 ## Assumptions
 
 - The primary run mode is inside Kubernetes. The app is intended to run in OrbStack Kubernetes and read the cluster through its ServiceAccount.
-- The manifests in `k8s/` are for development only. They are intentionally local-cluster oriented and not a production deployment baseline.
+- The manifests in `deploy/dev/k8s/` are for development only. They are intentionally local-cluster oriented and not a production deployment baseline.
 - Secret contents and Secret metadata are never returned by the API or rendered in the UI. Secret nodes are inferred from workload references instead of being fetched from the Kubernetes API.
 - The initial graph layout is deterministic and simple. It is meant for comprehension, not for perfect graph aesthetics.
 - Ingress is optional because local Ingress availability depends on the OrbStack setup.
@@ -123,19 +125,19 @@ docker images | grep kausal
 Apply the manifests:
 
 ```bash
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/serviceaccount.yaml
-kubectl apply -f k8s/clusterrole.yaml
-kubectl apply -f k8s/clusterrolebinding.yaml
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/networkpolicy.yaml
+kubectl apply -f deploy/dev/k8s/namespace.yaml
+kubectl apply -f deploy/dev/k8s/serviceaccount.yaml
+kubectl apply -f deploy/dev/k8s/clusterrole.yaml
+kubectl apply -f deploy/dev/k8s/clusterrolebinding.yaml
+kubectl apply -f deploy/dev/k8s/deployment.yaml
+kubectl apply -f deploy/dev/k8s/service.yaml
+kubectl apply -f deploy/dev/k8s/networkpolicy.yaml
 ```
 
 Optional Ingress:
 
 ```bash
-kubectl apply -f k8s/ingress.yaml
+kubectl apply -f deploy/dev/k8s/ingress.yaml
 ```
 
 Check rollout:
@@ -188,4 +190,4 @@ If `/api/healthz` returns an error, verify:
 - The `kausal` ServiceAccount is mounted into the Pod.
 - The ClusterRoleBinding points to `kausal/kausal`.
 - The local cluster actually exposes the Kubernetes API to in-cluster Pods.
-- The image tag in [k8s/deployment.yaml](/Users/vitaliquiering/Documents/Kausal/k8s/deployment.yaml:1) matches the image you built locally.
+- The image tag in `deploy/dev/k8s/deployment.yaml` matches the image you built locally.
