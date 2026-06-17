@@ -39,6 +39,9 @@ k8s-apply-ingress:
 k8s-rollout:
 	$(KUBECTL) -n $(NAMESPACE) rollout status deployment/$(APP)
 
+k8s-restart:
+	$(KUBECTL) -n $(NAMESPACE) rollout restart deployment/$(APP)
+
 port-forward:
 	$(KUBECTL) -n $(NAMESPACE) port-forward svc/$(APP) $(PORT):8080
 
