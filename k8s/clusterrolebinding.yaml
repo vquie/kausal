@@ -1,7 +1,13 @@
+# Development-only RBAC manifests for the local Kausal deployment.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: kausal-readonly
+  labels:
+    app.kubernetes.io/name: kausal
+    app.kubernetes.io/part-of: kausal
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/environment: dev
 subjects:
   - kind: ServiceAccount
     name: kausal

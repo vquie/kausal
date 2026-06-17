@@ -1,8 +1,14 @@
+# Development-only ingress manifest for the local Kausal deployment.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: kausal
   namespace: kausal
+  labels:
+    app.kubernetes.io/name: kausal
+    app.kubernetes.io/part-of: kausal
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/environment: dev
   annotations:
     kubernetes.io/ingress.class: nginx
 spec:

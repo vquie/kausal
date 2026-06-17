@@ -1,8 +1,14 @@
+# Development-only deployment manifest for the local Kausal deployment.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kausal
   namespace: kausal
+  labels:
+    app.kubernetes.io/name: kausal
+    app.kubernetes.io/part-of: kausal
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/environment: dev
 spec:
   replicas: 1
   selector:
@@ -12,14 +18,34 @@ spec:
     metadata:
       labels:
         app: kausal
+        app.kubernetes.io/name: kausal
+        app.kubernetes.io/part-of: kausal
+        app.kubernetes.io/component: backend
+        app.kubernetes.io/environment: dev
     spec:
+      automountServiceAccountToken: true
       serviceAccountName: kausal
+      securityContext:
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: app
           image: kausal:dev
           imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 8080
+          env:
+            - name: TMPDIR
+              value: /tmp
           readinessProbe:
             httpGet:
               path: /api/healthz
@@ -36,6 +62,14 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
+              ephemeral-storage: 128Mi
             limits:
               cpu: 300m
               memory: 256Mi
+              ephemeral-storage: 256Mi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

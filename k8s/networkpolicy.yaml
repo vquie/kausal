@@ -1,0 +1,45 @@
+# Development-only network policy for the local Kausal deployment.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kausal
+  namespace: kausal
+  labels:
+    app.kubernetes.io/name: kausal
+    app.kubernetes.io/part-of: kausal
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/environment: dev
+spec:
+  podSelector:
+    matchLabels:
+      app: kausal
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kausal
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
