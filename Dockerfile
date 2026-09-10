@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03 AS build
+FROM node:24-bookworm-slim@sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553 AS build
 WORKDIR /app
 
 COPY package.json ./
@@ -9,7 +9,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-FROM node:24-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03
+FROM node:24-bookworm-slim@sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
