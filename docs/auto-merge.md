@@ -5,6 +5,8 @@ The repository is prepared for auto-merge through two workflows:
 - `CI` installs the locked npm dependencies, audits production dependencies, builds the server and client, lints the repository, builds and scans the production container, smoke-tests the container, and reviews pull-request dependency changes.
 - `CodeQL` performs extended security analysis for JavaScript and TypeScript on pull requests, `main`, merge-queue commits, and a weekly schedule.
 
+The container build, Trivy scan, and smoke test run only when a production image input changes: the Dockerfile, Docker ignore rules, npm manifests or lockfile, npm configuration, or application files under `apps/`.
+
 All third-party GitHub Actions are pinned to immutable commit SHAs. Renovate keeps those pins current.
 
 ## Required GitHub settings

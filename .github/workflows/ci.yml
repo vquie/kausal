@@ -62,6 +62,42 @@ jobs:
       - name: Build client
         run: npm run build -w apps/client
 
+  changes:
+    name: Image change check
+    runs-on: ubuntu-latest
+    outputs:
+      image_changed: ${{ steps.filter.outputs.image_changed }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check whether the production image can change
+        id: filter
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'merge_group' && github.event.merge_group.base_sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          image_changed=false
+          if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
+            image_changed=true
+          else
+            changed_paths="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
+            while IFS= read -r path; do
+              case "${path}" in
+                Dockerfile|.dockerignore|.npmrc|package.json|package-lock.json|npm-shrinkwrap.json|apps/*)
+                  printf 'Production image input changed: %s\n' "${path}"
+                  image_changed=true
+                  break
+                  ;;
+              esac
+            done <<< "${changed_paths}"
+          fi
+          echo "image_changed=${image_changed}" >> "${GITHUB_OUTPUT}"
+
   dependency-audit:
     name: Dependency audit
     runs-on: ubuntu-latest
@@ -104,6 +140,8 @@ jobs:
 
   container:
     name: Container
+    needs: changes
+    if: needs.changes.outputs.image_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -184,6 +222,7 @@ jobs:
     needs:
       - backend
       - frontend
+      - changes
       - dependency-audit
       - lint
       - container
@@ -195,6 +234,7 @@ jobs:
         env:
           BACKEND_RESULT: ${{ needs.backend.result }}
           FRONTEND_RESULT: ${{ needs.frontend.result }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
           DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           CONTAINER_RESULT: ${{ needs.container.result }}
@@ -205,6 +245,7 @@ jobs:
           for check in \
             "Backend:${BACKEND_RESULT}" \
             "Frontend:${FRONTEND_RESULT}" \
+            "Image change check:${CHANGES_RESULT}" \
             "Dependency audit:${DEPENDENCY_AUDIT_RESULT}" \
             "Repository lint:${LINT_RESULT}" \
             "Container:${CONTAINER_RESULT}" \
