@@ -2,9 +2,10 @@ FROM node:24-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba32756
 WORKDIR /app
 
 COPY package.json ./
+COPY package-lock.json ./
 COPY apps/server/package.json apps/server/package.json
 COPY apps/client/package.json apps/client/package.json
-RUN npm install
+RUN npm ci
 
 COPY . .
 RUN npm run build
@@ -15,9 +16,12 @@ ENV NODE_ENV=production
 ENV PORT=8080
 
 COPY package.json ./
+COPY package-lock.json ./
 COPY apps/server/package.json apps/server/package.json
 COPY apps/client/package.json apps/client/package.json
-RUN npm install --omit=dev
+RUN npm ci --omit=dev --cache /tmp/npm-cache \
+    && rm -rf /tmp/npm-cache /root/.npm /usr/local/lib/node_modules/npm \
+    && rm -f /usr/local/bin/npm /usr/local/bin/npx
 
 COPY --from=build /app/apps/server/dist apps/server/dist
 COPY --from=build /app/apps/client/dist apps/client/dist
