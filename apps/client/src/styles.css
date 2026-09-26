@@ -139,7 +139,7 @@ select {
   max-width: 48ch;
 }
 
-@media (max-width: 700px) {
+@media (width <= 700px) {
   .brand-block {
     gap: 12px;
   }
@@ -1137,7 +1137,7 @@ select {
   text-align: right;
   max-width: 56%;
   padding-left: 10px;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .token-list,
