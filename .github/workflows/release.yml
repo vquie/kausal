@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
@@ -106,26 +107,40 @@ jobs:
           sbom: true
 
       - name: Create GitHub release
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
-        with:
-          generate_release_notes: true
-          append_body: true
-          body: |
-            ## Container image tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IMAGE_NAME: ${{ steps.image.outputs.name }}
+          VERSION: ${{ steps.image.outputs.version }}
+          MAJOR: ${{ steps.image.outputs.major }}
+          MINOR: ${{ steps.image.outputs.minor }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+        shell: bash
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            --method POST \
+            -f "tag_name=${GITHUB_REF_NAME}" \
+            --jq .body > release-notes.md
 
-            - `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.version }}`
-            - `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}`
-            - `${{ steps.image.outputs.name }}:v${{ steps.image.outputs.major }}`
-            - `${{ steps.image.outputs.name }}:${{ steps.image.outputs.version }}`
-            - `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}.${{ steps.image.outputs.minor }}`
-            - `${{ steps.image.outputs.name }}:${{ steps.image.outputs.major }}`
-            - `${{ steps.image.outputs.name }}:latest`
+          printf '\n' >> release-notes.md
+          cat >> release-notes.md <<EOF
+          ## Container image tags
 
-            ## Multi-arch
+          - \`${IMAGE_NAME}:v${VERSION}\`
+          - \`${IMAGE_NAME}:v${MAJOR}.${MINOR}\`
+          - \`${IMAGE_NAME}:v${MAJOR}\`
+          - \`${IMAGE_NAME}:${VERSION}\`
+          - \`${IMAGE_NAME}:${MAJOR}.${MINOR}\`
+          - \`${IMAGE_NAME}:${MAJOR}\`
+          - \`${IMAGE_NAME}:latest\`
 
-            - `linux/amd64`
-            - `linux/arm64`
+          ## Multi-arch
 
-            ## Digest
+          - \`linux/amd64\`
+          - \`linux/arm64\`
 
-            `${{ steps.build.outputs.digest }}`
+          ## Digest
+
+          \`${IMAGE_DIGEST}\`
+          EOF
+
+          gh release create "${GITHUB_REF_NAME}" --verify-tag --notes-file release-notes.md
