@@ -18,8 +18,8 @@ env:
   NODE_VERSION: "24"
 
 jobs:
-  backend:
-    name: Backend
+  application:
+    name: Application
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,96 +29,23 @@ jobs:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        id: node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          package-manager-cache: false
 
       - name: Install locked dependencies
-        run: npm ci
-
-      - name: Build server
-        run: npm run build -w apps/server
-
-  frontend:
-    name: Frontend
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Install locked dependencies
-        run: npm ci
-
-      - name: Build client
-        run: npm run build -w apps/client
-
-  changes:
-    name: Image change check
-    runs-on: ubuntu-latest
-    outputs:
-      image_changed: ${{ steps.filter.outputs.image_changed }}
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-
-      - name: Check whether the production image can change
-        id: filter
-        env:
-          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event_name == 'merge_group' && github.event.merge_group.base_sha || github.event.before }}
-          HEAD_SHA: ${{ github.sha }}
-        shell: bash
-        run: |
-          image_changed=false
-          if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
-            image_changed=true
-          else
-            changed_paths="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
-            while IFS= read -r path; do
-              case "${path}" in
-                Dockerfile|.dockerignore|.npmrc|package.json|package-lock.json|npm-shrinkwrap.json|apps/*)
-                  printf 'Production image input changed: %s\n' "${path}"
-                  image_changed=true
-                  break
-                  ;;
-              esac
-            done <<< "${changed_paths}"
-          fi
-          echo "image_changed=${image_changed}" >> "${GITHUB_OUTPUT}"
-
-  dependency-audit:
-    name: Dependency audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-
-      - name: Install locked dependencies
+        id: install
         run: npm ci
 
       - name: Audit production dependencies
-        run: npm audit --omit=dev --audit-level=high
+        if: ${{ !cancelled() && steps.node.outcome == 'success' }}
+        run: npm audit --package-lock-only --omit=dev --audit-level=high
+
+      - name: Type-check and build server and client
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm run build
 
   lint:
     name: Repository lint
@@ -140,8 +67,6 @@ jobs:
 
   container:
     name: Container
-    needs: changes
-    if: needs.changes.outputs.image_changed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -154,6 +79,7 @@ jobs:
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       - name: Build production image
+        id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
@@ -174,19 +100,22 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           severity: HIGH,CRITICAL
-          version: v0.74.0
+          version: v0.76.0
 
       - name: Smoke-test application container
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
         shell: bash
         run: |
+          trap 'docker rm --force kausal-ci >/dev/null 2>&1 || true' EXIT
           docker run --detach --name kausal-ci \
             --publish 127.0.0.1:18080:8080 \
             kausal:ci
-          trap 'docker rm --force kausal-ci >/dev/null 2>&1 || true' EXIT
 
+          # The health API requires Kubernetes; static assets can be tested without a cluster.
           ready=false
           for _ in {1..30}; do
-            if curl --fail --silent --show-error http://127.0.0.1:18080/ >/dev/null; then
+            if curl --fail --silent --show-error --max-time 5 \
+              http://127.0.0.1:18080/ --output /tmp/kausal-index.html; then
               ready=true
               break
             fi
@@ -196,6 +125,35 @@ jobs:
             docker logs kausal-ci
             exit 1
           fi
+
+          python3 - <<'PYTHON'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          from urllib.request import urlopen
+
+          class AssetParser(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.assets = []
+
+              def handle_starttag(self, tag, attrs):
+                  attrs = dict(attrs)
+                  if tag == "script" and attrs.get("src"):
+                      self.assets.append(attrs["src"])
+                  if tag == "link" and attrs.get("rel") == "stylesheet" and attrs.get("href"):
+                      self.assets.append(attrs["href"])
+
+          parser = AssetParser()
+          parser.feed(Path("/tmp/kausal-index.html").read_text())
+          if not parser.assets:
+              raise SystemExit("The application page contains no built assets")
+          for asset in parser.assets:
+              if not asset.startswith("/assets/"):
+                  raise SystemExit(f"Unexpected asset path: {asset}")
+              with urlopen(f"http://127.0.0.1:18080{asset}", timeout=10) as response:
+                  if "text/html" in response.headers.get("Content-Type", "") or not response.read():
+                      raise SystemExit(f"Missing or invalid built asset: {asset}")
+          PYTHON
 
   dependency-review:
     name: Dependency review
@@ -222,10 +180,7 @@ jobs:
     name: Merge gate
     if: always()
     needs:
-      - backend
-      - frontend
-      - changes
-      - dependency-audit
+      - application
       - lint
       - container
       - dependency-review
@@ -234,29 +189,31 @@ jobs:
     steps:
       - name: Require every applicable check to pass
         env:
-          BACKEND_RESULT: ${{ needs.backend.result }}
-          FRONTEND_RESULT: ${{ needs.frontend.result }}
-          CHANGES_RESULT: ${{ needs.changes.result }}
-          DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
+          APPLICATION_RESULT: ${{ needs.application.result }}
+          EVENT_NAME: ${{ github.event_name }}
           LINT_RESULT: ${{ needs.lint.result }}
           CONTAINER_RESULT: ${{ needs.container.result }}
           DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
         shell: bash
         run: |
           failed=0
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            if [[ "${DEPENDENCY_REVIEW_RESULT}" != "success" ]]; then
+              failed=1
+            fi
+          elif [[ "${DEPENDENCY_REVIEW_RESULT}" != "skipped" ]]; then
+            failed=1
+          fi
           for check in \
-            "Backend:${BACKEND_RESULT}" \
-            "Frontend:${FRONTEND_RESULT}" \
-            "Image change check:${CHANGES_RESULT}" \
-            "Dependency audit:${DEPENDENCY_AUDIT_RESULT}" \
+            "Application:${APPLICATION_RESULT}" \
             "Repository lint:${LINT_RESULT}" \
-            "Container:${CONTAINER_RESULT}" \
-            "Dependency review:${DEPENDENCY_REVIEW_RESULT}"; do
+            "Container:${CONTAINER_RESULT}"; do
             name="${check%%:*}"
             result="${check#*:}"
             printf '%-24s %s\n' "${name}" "${result}"
-            if [[ "${result}" != "success" && "${result}" != "skipped" ]]; then
+            if [[ "${result}" != "success" ]]; then
               failed=1
             fi
           done
+          printf '%-24s %s\n' "Dependency review" "${DEPENDENCY_REVIEW_RESULT}"
           exit "${failed}"

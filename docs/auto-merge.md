@@ -5,7 +5,7 @@ The repository is prepared for auto-merge through two workflows:
 - `CI` installs the locked npm dependencies, audits production dependencies, builds the server and client, lints the repository, builds and scans the production container, smoke-tests the container, and reviews pull-request dependency changes.
 - `CodeQL` performs extended security analysis for JavaScript and TypeScript on pull requests, `main`, merge-queue commits, and a weekly schedule.
 
-The container build, Trivy scan, and smoke test run only when a production image input changes: the Dockerfile, Docker ignore rules, npm manifests or lockfile, npm configuration, or application files under `apps/`.
+The container build, Trivy scan, and smoke test run for every pull request, push to `main`, and merge-queue commit. The smoke test checks the served HTML and its built JavaScript and CSS assets without requiring a Kubernetes cluster. Kubernetes API access is not covered by this smoke test.
 
 The runtime image installs available Debian package updates. CI and release builds bypass the runtime-stage cache so security fixes are refreshed even while the Node base-image digest remains unchanged.
 
