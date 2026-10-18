@@ -7,6 +7,8 @@ The repository is prepared for auto-merge through two workflows:
 
 The container build, Trivy scan, and smoke test run only when a production image input changes: the Dockerfile, Docker ignore rules, npm manifests or lockfile, npm configuration, or application files under `apps/`.
 
+The runtime image installs available Debian package updates. CI and release builds bypass the runtime-stage cache so security fixes are refreshed even while the Node base-image digest remains unchanged.
+
 All third-party GitHub Actions are pinned to immutable commit SHAs. Renovate keeps those pins current.
 
 ## Required GitHub settings

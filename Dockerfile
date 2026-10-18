@@ -10,10 +10,15 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6
+FROM node:24-bookworm-slim@sha256:0e0ff40c39bc087845bfb27465a0df4ea419520094bc35842ff83dd8cbe6f9b6 AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=8080
+
+# Apply Debian security fixes that may not yet be included in the Node base image.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY package.json ./
 COPY package-lock.json ./

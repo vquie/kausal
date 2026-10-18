@@ -158,6 +158,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          # Refresh runtime OS packages even when the pinned base image is unchanged.
+          no-cache-filters: runtime
           load: true
           push: false
           tags: kausal:ci
