@@ -100,7 +100,7 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
           severity: HIGH,CRITICAL
-          version: v0.76.0
+          version: v0.76.1
 
       - name: Smoke-test application container
         if: ${{ !cancelled() && steps.build.outcome == 'success' }}
